@@ -1,0 +1,114 @@
+@import "tailwindcss";
+
+/* ─── Elemental Theme Variables ──────────────────────────────────────
+   All values set dynamically by themeEngine.ts via CSS custom properties.
+   Defaults correspond to the Void theme.
+   ─────────────────────────────────────────────────────────────────── */
+:root {
+  --theme-bg: radial-gradient(ellipse at 50% 50%, #08002a 0%, #040015 60%, #010005 100%);
+  --theme-primary: #7C3AED;
+  --theme-secondary: #1e1040;
+  --theme-accent: #A855F7;
+  --theme-text: #EEE8FF;
+  --theme-subtext: #9980CC;
+  --theme-card-bg: rgba(8, 0, 30, 0.85);
+  --theme-card-border: rgba(109, 40, 217, 0.3);
+  --theme-particle: #5020A0;
+  --theme-glow: rgba(80, 20, 160, 0.4);
+  --theme-cursor: #7C3AED;
+}
+
+/* ─── Global Reset ───────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 80px;
+}
+
+body {
+  background: var(--theme-bg);
+  background-attachment: fixed;
+  color: var(--theme-text);
+  font-family: var(--font-geist-sans, 'Inter', system-ui, sans-serif);
+  min-height: 100dvh;
+  overflow-x: hidden;
+  transition: background 0.8s ease, color 0.5s ease;
+  cursor: crosshair;
+}
+
+/* ─── Custom Cursor ─────────────────────────────────────────────── */
+@media (pointer: fine) {
+  * {
+    cursor: none !important;
+  }
+}
+
+/* ─── Scrollbar Styling ─────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--theme-primary);
+  border-radius: 2px;
+}
+
+/* ─── Selection ─────────────────────────────────────────────────── */
+::selection {
+  background: var(--theme-primary);
+  color: #000;
+}
+
+/* ─── Utility Animations ─────────────────────────────────────────── */
+@keyframes ping-slow {
+  0%, 100% { transform: scale(1); opacity: 0.5; }
+  50% { transform: scale(1.15); opacity: 0; }
+}
+
+.animate-ping-slow {
+  animation: ping-slow 3s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+.animate-shimmer {
+  background-size: 200% auto;
+  animation: shimmer 3s linear infinite;
+}
+
+/* ─── Theme Transitions ─────────────────────────────────────────── */
+.theme-transition-target {
+  transition:
+    background 0.6s ease,
+    border-color 0.4s ease,
+    box-shadow 0.4s ease,
+    color 0.4s ease;
+}
+
+/* ─── Focus Styles ──────────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--theme-primary);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* ─── Reduced Motion ────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
