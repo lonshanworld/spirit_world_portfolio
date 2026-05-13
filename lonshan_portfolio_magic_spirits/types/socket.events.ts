@@ -5,6 +5,10 @@ export const SpiritEvents = {
   EMOTION: 'spirit:emotion',
   INTERACTION: 'spirit:interaction',
   STATE_UPDATE: 'spirit:state_update',
+  /** §1 Batch mode: request a fresh cache of idle lines from the server. */
+  BATCH_REQUEST: 'spirit:batch_request',
+  /** §1 Batch mode: server delivers pre-generated idle lines. */
+  BATCH_RESPONSE: 'spirit:batch_response',
 } as const;
 
 export const WorldEvents = {

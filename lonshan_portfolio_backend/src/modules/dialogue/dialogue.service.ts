@@ -255,6 +255,31 @@ export class DialogueService {
     await this.playLines(lines, emit);
   }
 
+  /**
+   * §1 Batch mode: generate N diverse single-line messages upfront.
+   * Called once per client on connect — the client caches and drains them locally.
+   * Lines are generated in parallel; AI concurrency cap means most use static fallback,
+   * which is intentional and fast (zero AI calls needed, always high quality).
+   */
+  async generateBatch(count: number): Promise<IDialogueLine[]> {
+    const context = await this.buildContext('idle');
+    // Shuffle featured spirits so each batch has diverse speakers
+    const shuffled = [...FEATURED].sort(() => Math.random() - 0.5);
+    const selected = shuffled.slice(0, Math.min(count, FEATURED.length));
+
+    const lines = await Promise.all(
+      selected.map(async (spiritId) => {
+        const emotion = this.emotionService.get(spiritId);
+        return this.aiService.generateLine(spiritId, emotion, context);
+      }),
+    );
+
+    // Record to memory log (non-blocking)
+    Promise.all(lines.map((line) => this.recordLine(line))).catch(() => {});
+
+    return lines;
+  }
+
   // ── Line player ────────────────────────────────────────────────
 
   async playLines(

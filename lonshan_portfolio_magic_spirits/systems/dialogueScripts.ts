@@ -601,8 +601,49 @@ export const SPIRIT_CLICK_LINES: Record<ElementType, DialogueLine[][]> = {
   ],
 };
 
-// ─── Combination Responses ────────────────────────────────────────
+// ─── Hover Reactions ─────────────────────────────────────────────
+// Short personality-driven lines shown when the user hovers a spirit.
+// Triggered only when the global message queue is idle (never interrupts sequences).
 
+export const HOVER_REACTIONS: Record<string, string[]> = {
+  fire:      ["Are you calling me?", "You felt my warmth, didn't you?", "Do you want my power?"],
+  water:     ["I'm listening...", "Something brought you to me.", "Still waters notice everything."],
+  ice:       ["State your purpose.", "I was aware of you the moment you looked.", "Careful — I bite cold."],
+  wind:      ["Oh! Hello there!", "I felt you before you touched me!", "Were you looking for me?"],
+  soil:      ["The earth felt your presence.", "I have been here since before you arrived.", "You found me."],
+  trees:     ["The leaves whispered your arrival.", "Hello, wanderer.", "You are welcome here."],
+  lightning: ["ZAP! Got your attention!", "You can't look away, can you?", "I move faster than thought — and I noticed you!"],
+  dark:      ["...you see me.", "I was watching you first.", "The shadow always knows."],
+  light:     ["You found the light!", "I've been shining for you.", "Something good is coming — I can feel it."],
+  healing:   ["Are you alright?", "You feel tension in you. Let me help.", "I'm right here."],
+  void:      ["...", "You exist. I suppose that will do.", "The void acknowledges you."],
+  space:     ["From across the cosmos, you found me.", "You carry stardust. I can tell.", "Do you hear the stars?"],
+  time:      ["I knew this moment would come.", "Right on schedule.", "This was always going to happen."],
+  robot:     ["Interaction registered. Hello.", "Query detected: you are curious about me.", "You are now being analyzed. Don't panic."],
+};
+
+// ─── Click Dramatic Lines (world-reaction, shown on spirit click) ─────────────
+// One fixed dramatic line per element type.
+// STEP 2 of the click sequence: spirit declares its world-reaction intent.
+
+export const SPIRIT_CLICK_DRAMATIC: Record<string, DialogueLine> = {
+  fire:      { spiritId: 'fire',      text: "Let's transform this world into flame hell.",       delay: 0, emotion: 'excited',    targetUser: true },
+  water:     { spiritId: 'water',     text: "Let the flow of this world be rewritten.",          delay: 0, emotion: 'mysterious', targetUser: true },
+  ice:       { spiritId: 'ice',       text: "I will freeze this moment into eternity.",          delay: 0, emotion: 'neutral',    targetUser: true },
+  wind:      { spiritId: 'wind',      text: "The winds of change are already howling.",          delay: 0, emotion: 'excited',    targetUser: true },
+  soil:      { spiritId: 'soil',      text: "Ancient forces stir. The ground will remember.",   delay: 0, emotion: 'mysterious', targetUser: true },
+  trees:     { spiritId: 'trees',     text: "Watch the world bloom and devour itself.",          delay: 0, emotion: 'mysterious', targetUser: true },
+  lightning: { spiritId: 'lightning', text: "I'll overwrite this world in a flash.",             delay: 0, emotion: 'excited',    targetUser: true },
+  dark:      { spiritId: 'dark',      text: "The shadows consume. Everything returns to dark.",  delay: 0, emotion: 'mysterious', targetUser: true },
+  light:     { spiritId: 'light',     text: "Blinding revelation — can you handle it?",         delay: 0, emotion: 'excited',    targetUser: true },
+  healing:   { spiritId: 'healing',   text: "This world needed mending. Now it begins.",        delay: 0, emotion: 'calm',       targetUser: true },
+  void:      { spiritId: 'void',      text: "Everything returns to nothing.",                    delay: 0, emotion: 'mysterious', targetUser: true },
+  space:     { spiritId: 'space',     text: "Reality bends. The cosmos reshapes itself.",       delay: 0, emotion: 'mysterious', targetUser: true },
+  time:      { spiritId: 'time',      text: "Time fractures. The sequence breaks here.",        delay: 0, emotion: 'calm',       targetUser: true },
+  robot:     { spiritId: 'robot',     text: "Initiating world-overwrite protocol. Stand clear.", delay: 0, emotion: 'neutral',   targetUser: true },
+};
+
+// ─── Combination Responses ────────────────────────────────────────
 export const COMBINATION_LINES: Record<string, DialogueLine[]> = {
   lava: [
     { spiritId: 'fire', text: 'LAVA! We are unstoppable together!', delay: 0, emotion: 'excited' },

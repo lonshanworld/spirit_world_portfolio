@@ -3,6 +3,10 @@ export enum SpiritEvents {
   EMOTION = 'spirit:emotion',
   INTERACTION = 'spirit:interaction',
   STATE_UPDATE = 'spirit:state_update',
+  /** §1 Batch mode: client requests a fresh cache of idle lines. */
+  BATCH_REQUEST = 'spirit:batch_request',
+  /** §1 Batch mode: server sends pre-generated idle lines to a specific client. */
+  BATCH_RESPONSE = 'spirit:batch_response',
 }
 
 export enum WorldEvents {

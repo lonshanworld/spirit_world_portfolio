@@ -8,7 +8,6 @@ import { SpiritCreature } from './SpiritCreature';
 import { MagicEffect } from '../magic/MagicEffect';
 import { SpiritAura } from '../magic/SpiritAura';
 import { useDialogueStore } from '../../store/dialogueStore';
-import { ActiveDialogue } from '../../types/dialogue.types';
 
 interface SpiritOrbProps {
   instance: SpiritInstance;
@@ -64,16 +63,14 @@ function getCombatAnimate(status: CombatStatus): Record<string, unknown> {
 }
 
 // ─── Inline speech bubble (appears above the speaking spirit) ─────
+// Lifetime is managed by useSpiritDialogue's queue — no local timer needed.
 
 function SpiritAttachedBubble({
-  dialogue, def, onExpire,
+  dialogue, def,
 }: {
-  dialogue: ActiveDialogue;
+  dialogue: { id: string; spiritId: string; text: string; targetUser: boolean };
   def: SpiritDefinition;
-  onExpire: (id: string) => void;
 }) {
-  const BUBBLE_DURATION_MS = 5500;
-
   return (
     <motion.div
       key={dialogue.id}
@@ -81,7 +78,6 @@ function SpiritAttachedBubble({
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -6, scale: 0.88 }}
       transition={{ type: 'spring', stiffness: 200, damping: 20 }}
-      onAnimationComplete={() => setTimeout(() => onExpire(dialogue.id), BUBBLE_DURATION_MS)}
       className="absolute pointer-events-none"
       style={{
         // Anchored above the spirit orb
@@ -154,9 +150,14 @@ export function SpiritOrb({
   const [wanderX, setWanderX] = useState(instance.worldX);
   const [wanderY, setWanderY] = useState(instance.worldY);
   const [facingLeft, setFacingLeft] = useState(false);
-  const prevWanderX = useRef(instance.worldX);
+  const [isFrozen, setIsFrozen] = useState(false);
+  const prevWanderX   = useRef(instance.worldX);
   const isSpeakingRef = useRef(instance.isSpeaking);
+  const isHoveredRef  = useRef(instance.isHovered);
+  const isFrozenRef   = useRef(false);
   useEffect(() => { isSpeakingRef.current = instance.isSpeaking; }, [instance.isSpeaking]);
+  useEffect(() => { isHoveredRef.current  = instance.isHovered;  }, [instance.isHovered]);
+  useEffect(() => { isFrozenRef.current   = isFrozen;            }, [isFrozen]);
 
   // Track horizontal movement direction for body orientation
   useEffect(() => {
@@ -170,8 +171,8 @@ export function SpiritOrb({
     let cancelled = false;
 
     const moveTo = () => {
-      // Don't wander while the spirit is talking
-      if (!isSpeakingRef.current) {
+      // Don't wander while talking, hovered, or frozen (click sequence)
+      if (!isSpeakingRef.current && !isHoveredRef.current && !isFrozenRef.current) {
         setWanderX(4 + Math.random() * 92);
         setWanderY(2 + Math.random() * 96);
       }
@@ -221,40 +222,43 @@ export function SpiritOrb({
     });
   }, [controls, motionCfg, def.motionSpeed, instance.personalityOffset, index]);
 
+  // Float: stop while hovered/frozen so the spirit "holds position"; restart on release.
+  // Scale is driven exclusively by whileInView (reacts to emotion changes automatically).
   useEffect(() => {
-    startFloating();
-  }, [startFloating]);
-
-  // Speaking pulse — scale only, don't restart the float
-  useEffect(() => {
-    if (instance.isSpeaking) {
-      controls.start({
-        scale: [1, 1.12, 1.06, 1.12, 1],
-        transition: { duration: 0.8, repeat: Infinity, repeatType: 'reverse' },
-      });
+    if (instance.isHovered || isFrozen) {
+      controls.stop();
     } else {
-      controls.start({
-        scale: getEmotionScale(instance.emotion) * instance.sizeVariant,
-        transition: { duration: 0.5 },
-      });
+      startFloating();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [instance.isSpeaking, instance.emotion, instance.sizeVariant, controls]);
+  }, [instance.isHovered, isFrozen]);
 
-  const dialogues      = useDialogueStore((s) => s.dialogues);
-  const removeDialogue = useDialogueStore((s) => s.removeDialogue);
-  const activeDialogue = dialogues.find((d) => d.spiritId === instance.element) ?? null;
-  const showBubble     = instance.isSpeaking && !!activeDialogue;
+  // Combat animations — applied through controls; reset and restart float when done.
+  useEffect(() => {
+    if (instance.combatStatus === 'idle') {
+      controls.start({ rotate: 0, transition: { duration: 0.4 } });
+      if (!isHoveredRef.current && !isFrozenRef.current) startFloating();
+    } else {
+      controls.start(getCombatAnimate(instance.combatStatus) as Parameters<typeof controls.start>[0]);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [instance.combatStatus]);
+
+  // Dialogue: single global slot — bubble shows on the speaking element only
+  const currentDialogue = useDialogueStore((s) => s.current);
+  const activeDialogue  = currentDialogue?.spiritId === instance.element ? currentDialogue : null;
+  const showBubble      = instance.isSpeaking && !!activeDialogue;
 
   // Magic state
   const [isTapped,   setIsTapped]   = useState(false);
   const [isCasting,  setIsCasting]  = useState(false);
 
-  // Wander transition: slow atmospheric glide, frozen while speaking so bubble stays anchored
+  // Wander transition: always use the slow CSS glide.
+  // NEVER snap to 'none' — that causes an instant jump to the wander target
+  // because wanderX/Y is already set to the new position when the timer fires.
+  // New wander targets are blocked by isHoveredRef/isSpeakingRef/isFrozenRef guards.
   const wanderDuration = (22 + instance.personalityOffset * 16).toFixed(1);
-  const wanderTransition = instance.isSpeaking
-    ? 'none'
-    : `left ${wanderDuration}s ease-in-out, top ${wanderDuration}s ease-in-out`;
+  const wanderTransition = `left ${wanderDuration}s ease-in-out, top ${wanderDuration}s ease-in-out`;
 
   return (
     /* Wander wrapper — CSS-animated long-range movement through the world */
@@ -275,17 +279,13 @@ export function SpiritOrb({
           <SpiritAttachedBubble
             dialogue={activeDialogue}
             def={def}
-            onExpire={removeDialogue}
           />
         )}
       </AnimatePresence>
 
       {/* Float wrapper — Framer Motion short-range oscillation */}
       <motion.div
-        animate={{
-          ...controls,
-          ...getCombatAnimate(instance.combatStatus),
-        }}
+        animate={controls}
         initial={{ opacity: 0, scale: 0 }}
         whileInView={{ opacity: 1, scale: getEmotionScale(instance.emotion) * instance.sizeVariant }}
         viewport={{ once: true, margin: '200px' }}
@@ -297,7 +297,10 @@ export function SpiritOrb({
         }}
         onTap={() => {
           onTap(instance.element);
-          // Fire isTapped so MagicEffect picks it up on leading edge
+          // STEP 1: freeze movement for the click sequence duration
+          setIsFrozen(true);
+          setTimeout(() => setIsFrozen(false), 4500);
+          // STEP 3: trigger spell effect
           setIsTapped(true);
           setTimeout(() => setIsTapped(false), 350);
         }}

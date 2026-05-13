@@ -18,12 +18,6 @@ import { SpiritInteractDto, SectionVisibleDto, ThemeChangeRequestDto } from './d
 import { IDialogueLine, ElementType } from './interfaces/spirit.interface';
 import { WorldEvents, ThemeEvents, SpiritEvents } from '../events/world.events';
 
-// Recruiter check interval — every 45s, check if visitor qualifies
-const RECRUITER_CHECK_INTERVAL_MS = 45_000;
-// Idle tick range: 25-45 seconds
-const IDLE_MIN_MS = 25_000;
-const IDLE_MAX_MS = 45_000;
-
 @WebSocketGateway({
   cors: {
     origin: process.env.FRONTEND_URL ?? 'http://localhost:3000',
@@ -36,8 +30,6 @@ export class SpiritsGateway
 {
   @WebSocketServer() server: Server;
   private readonly logger = new Logger(SpiritsGateway.name);
-  private idleTimer: NodeJS.Timeout | null = null;
-  private recruiterTimer: NodeJS.Timeout | null = null;
 
   constructor(
     private readonly spiritsService: SpiritsService,
@@ -47,26 +39,37 @@ export class SpiritsGateway
   ) {}
 
   afterInit(): void {
-    this.logger.log('SpiritsGateway initialized — AI dialogue system active');
-    this.scheduleIdleTick();
-    this.scheduleRecruiterCheck();
+    this.logger.log('SpiritsGateway initialized — batch dialogue mode active');
   }
 
   handleConnection(client: Socket): void {
     this.logger.log(`Client connected: ${client.id}`);
     this.worldContextService.resetSession();
 
-    // Send current world state to new client
     client.emit(WorldEvents.STATE, {
       spirits: this.spiritsService.getAllStates(),
     });
 
-    // AI-generated greeting after a short delay
-    setTimeout(async () => {
-      await this.dialogueService.generateGreeting((line) =>
-        this.emitDialogueLine(line),
-      );
-    }, 2500);
+    // §1 Batch mode: greeting + pre-generated idle cache — sent to this client only
+    this.initClientDialogue(client).catch((err) =>
+      this.logger.error('initClientDialogue error', err),
+    );
+  }
+
+  /** §1 Send greeting then a batch of cached idle lines to the newly connected client. */
+  private async initClientDialogue(client: Socket): Promise<void> {
+    await new Promise<void>((r) => setTimeout(r, 2500));
+    if (!client.connected) return;
+    await this.dialogueService.generateGreeting((line) => this.emitDialogueLine(line));
+    const batch = await this.dialogueService.generateBatch(10);
+    if (client.connected) client.emit(SpiritEvents.BATCH_RESPONSE, batch);
+  }
+
+  /** §1 Client requests a fresh batch when its local cache runs low. */
+  @SubscribeMessage(SpiritEvents.BATCH_REQUEST)
+  async handleBatchRequest(@ConnectedSocket() client: Socket): Promise<void> {
+    const lines = await this.dialogueService.generateBatch(8);
+    client.emit(SpiritEvents.BATCH_RESPONSE, lines);
   }
 
   handleDisconnect(client: Socket): void {
@@ -142,8 +145,9 @@ export class SpiritsGateway
     }
     this.server.emit(SpiritEvents.DIALOGUE, line);
 
-    // Auto-clear speaking flag after estimated reading time
-    const readMs = line.text.length * 60 + 1500;
+    // Auto-clear speaking flag using word-count duration (matches frontend queue)
+    const words = line.text.trim().split(/\s+/).filter(Boolean).length;
+    const readMs = Math.max(1000, words * 800) + 600;
     setTimeout(
       () => this.spiritsService.setSpeaking(line.spiritId, false),
       readMs,
@@ -154,36 +158,5 @@ export class SpiritsGateway
   private emitEmotionUpdate(spiritId: ElementType): void {
     const emotion = this.emotionService.get(spiritId);
     this.server.emit(SpiritEvents.EMOTION, { spiritId, emotion });
-  }
-
-  /** Idle tick — AI conversation between two random spirits */
-  private scheduleIdleTick(): void {
-    const interval = IDLE_MIN_MS + Math.random() * (IDLE_MAX_MS - IDLE_MIN_MS);
-    this.idleTimer = setTimeout(async () => {
-      if ((this.server?.sockets?.sockets?.size ?? 0) > 0) {
-        await this.dialogueService.generateIdleConversation((line) =>
-          this.emitDialogueLine(line),
-        );
-      }
-      this.scheduleIdleTick();
-    }, interval);
-  }
-
-  /** Recruiter mode check — fires if visitor is deeply exploring */
-  private scheduleRecruiterCheck(): void {
-    this.recruiterTimer = setInterval(async () => {
-      if ((this.server?.sockets?.sockets?.size ?? 0) === 0) return;
-      // WorldContextService determines isRecruiterLikely internally
-      const ctx = this.worldContextService.buildContext({
-        trigger: 'recruiter_mode',
-        nearbySpirits: [],
-        recentHistory: [],
-      });
-      if (ctx.isRecruiterLikely) {
-        await this.dialogueService.generateRecruiterDialogue((line) =>
-          this.emitDialogueLine(line),
-        );
-      }
-    }, RECRUITER_CHECK_INTERVAL_MS);
   }
 }

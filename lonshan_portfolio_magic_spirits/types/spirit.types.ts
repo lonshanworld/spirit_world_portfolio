@@ -26,7 +26,8 @@ export type EmotionType =
   | 'sleepy'
   | 'confused'
   | 'proud'
-  | 'curious';
+  | 'curious'
+  | 'scared';
 
 export type MotionPattern = 'float' | 'pulse' | 'spin' | 'wave' | 'erratic' | 'drift';
 

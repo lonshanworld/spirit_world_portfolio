@@ -3,32 +3,22 @@
 import { create } from 'zustand';
 import { ActiveDialogue } from '../types/dialogue.types';
 
-const MAX_VISIBLE_DIALOGUES = 3;
-
+/**
+ * Dialogue store — single active slot.
+ *
+ * Only ONE message is ever visible at a time.
+ * The serialized queue that fills this slot lives in useSpiritDialogue (hook-level),
+ * keeping timing logic out of the store.
+ */
 interface DialogueStore {
-  dialogues: ActiveDialogue[];
-  addDialogue: (dialogue: ActiveDialogue) => void;
-  removeDialogue: (id: string) => void;
+  /** The single currently-displayed dialogue, or null when silent. */
+  current: ActiveDialogue | null;
+  setCurrent: (d: ActiveDialogue | null) => void;
   clearAll: () => void;
 }
 
 export const useDialogueStore = create<DialogueStore>((set) => ({
-  dialogues: [],
-
-  addDialogue: (dialogue) =>
-    set((state) => {
-      const next = [...state.dialogues, dialogue];
-      // Keep only the most recent MAX_VISIBLE_DIALOGUES entries
-      if (next.length > MAX_VISIBLE_DIALOGUES) {
-        return { dialogues: next.slice(next.length - MAX_VISIBLE_DIALOGUES) };
-      }
-      return { dialogues: next };
-    }),
-
-  removeDialogue: (id) =>
-    set((state) => ({
-      dialogues: state.dialogues.filter((d) => d.id !== id),
-    })),
-
-  clearAll: () => set({ dialogues: [] }),
+  current: null,
+  setCurrent: (d) => set({ current: d }),
+  clearAll: () => set({ current: null }),
 }));

@@ -38,6 +38,7 @@ const EV: Record<
   confused:   { eyeScaleY: 1.10, eyeOffsetY: -1, glow: 0.65, tilt: 10, bounce: false },
   proud:      { eyeScaleY: 0.90, eyeOffsetY: -2, glow: 0.95, tilt: -6, bounce: false },
   curious:    { eyeScaleY: 1.30, eyeOffsetY: -2, glow: 0.75, tilt:  5, bounce: false },
+  scared:     { eyeScaleY: 1.55, eyeOffsetY: -4, glow: 0.80, tilt: -2, bounce: false },
 };
 
 // ─── Per-Spirit Config ─────────────────────────────────────────────────────────
@@ -474,6 +475,7 @@ function pickGesture(
     case 'happy':      return 'thumbsUp';
     case 'sad':        return 'sag';
     case 'angry':      return 'bristle';
+    case 'scared':     return 'recoil';
     case 'embarrassed':return 'recoil';
     case 'sleepy':     return 'sag';
     case 'confused':   return 'shrug';
@@ -820,6 +822,13 @@ function SpiritEyes({ eL, eR, emotion, blinking, pupilOffset, isSpeaking, mCx, m
           // Open O — small ellipse
           <ellipse cx={mCx} cy={mCy + 3} rx={4} ry={5.5} fill="none"
             stroke={eL.eyeCol} strokeWidth="1.3" opacity="0.65" />
+        ) : emotion === 'scared' ? (
+          // Wide open O — bigger than surprised, trembling
+          <motion.ellipse cx={mCx} cy={mCy + 3} rx={5.5} ry={7} fill="none"
+            stroke={eL.eyeCol} strokeWidth="1.4" opacity="0.80"
+            animate={{ rx: [5.5, 6.2, 5.5], ry: [7, 7.8, 7] }}
+            transition={{ duration: 0.25, repeat: Infinity, ease: 'easeInOut' }}
+          />
         ) : emotion === 'happy' || emotion === 'excited' || emotion === 'proud' ? (
           // Wide open smile
           <path d={`M ${mCx - 9},${mCy - 1} Q ${mCx},${mCy + 9} ${mCx + 9},${mCy - 1}`}
@@ -968,6 +977,33 @@ function EmotionFace({ emotion, eL, eR }: { emotion: EmotionType; eL: EyeCfg; eR
             animate={{ y: [eR.cy - 18, eR.cy - 36], opacity: [0.38, 0], x: [eR.cx + 18, eR.cx + 28] }}
             transition={{ duration: 2.6, repeat: Infinity, repeatDelay: 0.4, delay: 1.0 }}
           >z</motion.text>
+        </>
+      );
+
+    case 'scared':
+      return (
+        <>
+          {/* Wide arched brows pulled high and inward — fear V-shape */}
+          <motion.line
+            x1={eL.cx - eL.rx * 0.7} y1={eL.cy - eL.ry - 3}
+            x2={eL.cx + eL.rx * 0.9} y2={eL.cy - eL.ry - 10}
+            stroke="rgba(255,255,255,0.55)" strokeWidth="1.8" strokeLinecap="round"
+            animate={{ y1: [eL.cy - eL.ry - 3, eL.cy - eL.ry - 5, eL.cy - eL.ry - 3] }}
+            transition={{ duration: 0.22, repeat: Infinity, ease: 'easeInOut' }}
+          />
+          <motion.line
+            x1={eR.cx - eR.rx * 0.9} y1={eR.cy - eR.ry - 10}
+            x2={eR.cx + eR.rx * 0.7} y2={eR.cy - eR.ry - 3}
+            stroke="rgba(255,255,255,0.55)" strokeWidth="1.8" strokeLinecap="round"
+            animate={{ y2: [eR.cy - eR.ry - 3, eR.cy - eR.ry - 5, eR.cy - eR.ry - 3] }}
+            transition={{ duration: 0.22, repeat: Infinity, ease: 'easeInOut', delay: 0.05 }}
+          />
+          {/* Trembling sweat drop */}
+          <motion.ellipse cx={eL.cx - 2} cy={eL.cy - eL.ry - 18} rx={2} ry={3.5}
+            fill="rgba(150,200,255,0.72)"
+            animate={{ cy: [eL.cy - eL.ry - 18, eL.cy - eL.ry - 10], opacity: [0.72, 0] }}
+            transition={{ duration: 1.2, repeat: Infinity, repeatDelay: 0.6 }}
+          />
         </>
       );
 
@@ -1155,7 +1191,10 @@ export function SpiritCreature({
     <div
       ref={containerRef}
       className="relative select-none pointer-events-none"
-      style={{ width: w, height: h }}
+      style={{
+        width: w, height: h,
+        filter: `drop-shadow(0 ${Math.round(h * 0.06)}px ${Math.round(h * 0.14)}px ${def.glowColor}55) drop-shadow(0 4px 9px rgba(0,0,0,0.30))`,
+      }}
     >
       {/* Ambient glow bloom */}
       <div
@@ -1196,6 +1235,26 @@ export function SpiritCreature({
           glow={def.glowColor}
           gId={gId}
         />
+
+        {/* ── 3D Volume Lighting ────────────────────────────────────────────── */}
+        {/* Shared gradient defs — IDs are instance-unique to avoid collisions   */}
+        <defs>
+          {/* Key light: directional highlight from upper-left simulates depth  */}
+          <radialGradient id={`${gId}-kl`} cx="34%" cy="26%" r="64%">
+            <stop offset="0%"   stopColor="rgba(255,255,255,0.42)" />
+            <stop offset="55%"  stopColor="rgba(255,255,255,0.10)" />
+            <stop offset="100%" stopColor="rgba(255,255,255,0)" />
+          </radialGradient>
+          {/* Rim light: element secondary color from lower-right fill light     */}
+          <radialGradient id={`${gId}-rl`} cx="72%" cy="74%" r="52%">
+            <stop offset="0%"   stopColor={def.secondaryColor} stopOpacity="0.26" />
+            <stop offset="100%" stopColor={def.secondaryColor} stopOpacity="0" />
+          </radialGradient>
+        </defs>
+        {/* Rim light ellipse — subtle element-color bounce light from below     */}
+        <ellipse cx="63" cy="78" rx="34" ry="28" fill={`url(#${gId}-rl)`} style={{ pointerEvents: 'none' }} />
+        {/* Key light ellipse — white top-left highlight for volume and form     */}
+        <ellipse cx="38" cy="36" rx="30" ry="22" fill={`url(#${gId}-kl)`} style={{ pointerEvents: 'none' }} />
 
         {/* Arms + 3 fingers each with gesture system */}
         <SpiritArms
@@ -1274,6 +1333,21 @@ export function SpiritCreature({
           transition={{ duration: 0.85, repeat: Infinity }}
         />
       )}
+
+      {/* Ground shadow — soft ellipse anchors the spirit in 3D space */}
+      <div
+        className="absolute pointer-events-none"
+        style={{
+          bottom: -5,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: w * 0.68,
+          height: 6,
+          background: `radial-gradient(ellipse, rgba(0,0,0,0.28) 0%, transparent 70%)`,
+          borderRadius: '50%',
+          opacity: emotion === 'excited' || emotion === 'proud' ? 0.6 : 0.85,
+        }}
+      />
     </div>
   );
 }

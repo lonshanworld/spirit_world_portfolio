@@ -18,7 +18,7 @@ import { PromptBuilder } from './prompt.builder';
 // ── Throttle constants ─────────────────────────────────────────────
 const MIN_SPIRIT_COOLDOWN_MS = 8_000;  // minimum gap between two lines from same spirit
 const MAX_CONCURRENT = 2;              // max simultaneous Gemini requests
-const GEMINI_MODEL = 'gemini-3-flash-live';
+const GEMINI_MODEL = 'gemini-3.1-flash-lite';
 
 // ── Static fallback pool ───────────────────────────────────────────
 // Used when AI is unavailable — keeps the world feeling alive

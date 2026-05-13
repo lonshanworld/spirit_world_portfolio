@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useCallback, useRef } from 'react';
+import { useEffect, useCallback, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 
 // World layer
@@ -16,6 +16,9 @@ import { CombatManager } from '../components/spirits/CombatManager';
 import { ThemeProvider } from '../components/theme/ThemeProvider';
 import { ThemeTransition } from '../components/theme/ThemeTransition';
 
+// Elemental spell overlay
+import { WorldSpellOverlay } from '../components/effects/WorldSpellOverlay';
+
 // Portfolio sections
 import { HeroSection } from '../components/portfolio/HeroSection';
 import { ProjectsSection } from '../components/portfolio/ProjectsSection';
@@ -30,7 +33,7 @@ import { useWorldStore } from '../store/worldStore';
 import { useThemeStore } from '../store/themeStore';
 import { useSpiritDialogue } from '../hooks/useSpiritDialogue';
 import { useScrollSection } from '../hooks/useScrollSection';
-import { ElementType } from '../types/spirit.types';
+import { ActiveTheme, ElementType } from '../types/spirit.types';
 import { getCombination } from '../systems/combinationEngine';
 import { THEMES } from '../systems/themeEngine';
 
@@ -87,7 +90,8 @@ function MagicalCursor() {
 function WorldOrchestrator() {
   const initSpirits = useWorldStore((s) => s.initSpirits);
   const pendingCombination = useThemeStore((s) => s.pendingCombination);
-  const { triggerSpiritClick, triggerSection, triggerCombination } = useSpiritDialogue();
+  const { triggerSpiritClick, triggerHover, triggerSection, triggerCombination } = useSpiritDialogue();
+  const [spellPayload, setSpellPayload] = useState<{ id: string; theme: ActiveTheme } | null>(null);
 
   // Initialise spirits on mount
   useEffect(() => {
@@ -125,11 +129,22 @@ function WorldOrchestrator() {
     [triggerSpiritClick],
   );
 
+  const handleWorldSpell = useCallback((theme: ActiveTheme) => {
+    setSpellPayload({ id: `spell-${Date.now()}`, theme });
+  }, []);
+
+  const handleSpellComplete = useCallback((id: string) => {
+    setSpellPayload((p) => (p?.id === id ? null : p));
+  }, []);
+
   return (
     <>
       {/* Fixed world layers — always visible */}
       <ParticleField />
       <ThemeTransition />
+
+      {/* Full-screen elemental spell — appears above everything on spirit tap */}
+      <WorldSpellOverlay spell={spellPayload} onComplete={handleSpellComplete} />
 
       {/* Spirit world layer — ABSOLUTE so spirits roam the entire scrollable document.
           Spirits at worldY > 100% appear in sections below the hero as you scroll. */}
@@ -138,6 +153,8 @@ function WorldOrchestrator() {
           <SpiritManager
             onSpiritTap={handleSpiritTap}
             onSpiritClick={handleSpiritClick}
+            onSpiritHover={triggerHover}
+            onWorldSpell={handleWorldSpell}
           />
           {/* Combat system — rendered inside spirit layer so z-indices align */}
           <CombatManager />

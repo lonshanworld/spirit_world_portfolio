@@ -14,6 +14,7 @@ interface ThemeStore {
 
   setTheme: (theme: ActiveTheme) => void;
   tapSpirit: (element: ElementType) => ActiveTheme;
+  clearPendingCombination: () => void;
   beginTransition: () => void;
   endTransition: () => void;
 }
@@ -36,14 +37,14 @@ export const useThemeStore = create<ThemeStore>((set, get) => ({
   },
 
   tapSpirit: (element) => {
-    const { pendingCombination, pendingTapTime, setTheme } = get();
+    const { pendingCombination, pendingTapTime } = get();
     const now = Date.now();
 
     // Check if within combination window
     if (pendingCombination && now - pendingTapTime <= COMBINATION_WINDOW_MS) {
       const hybrid = getCombination(pendingCombination, element);
       if (hybrid) {
-        setTheme(hybrid);
+        set({ pendingCombination: null, pendingTapTime: 0 });
         return hybrid;
       }
     }
@@ -51,16 +52,10 @@ export const useThemeStore = create<ThemeStore>((set, get) => ({
     // No combination — start pending window for this spirit
     set({ pendingCombination: element, pendingTapTime: now });
 
-    // Switch to this element's theme after a short delay (allows 2nd tap)
-    setTimeout(() => {
-      const { pendingCombination: still, pendingTapTime: t } = get();
-      if (still === element && Date.now() - t >= COMBINATION_WINDOW_MS - 100) {
-        setTheme(element);
-      }
-    }, COMBINATION_WINDOW_MS);
-
     return element;
   },
+
+  clearPendingCombination: () => set({ pendingCombination: null, pendingTapTime: 0 }),
 
   beginTransition: () => set({ isTransitioning: true }),
   endTransition: () => set({ isTransitioning: false }),

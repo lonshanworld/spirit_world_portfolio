@@ -14,14 +14,14 @@ export function useSocket() {
   const socketRef = useRef<Socket | null>(null);
   const setSpiritEmotion = useWorldStore((s) => s.setSpiritEmotion);
   const setSpiritSpeaking = useWorldStore((s) => s.setSpiritSpeaking);
-  const addDialogue = useDialogueStore((s) => s.addDialogue);
+  const setCurrent = useDialogueStore((s) => s.setCurrent);
 
   const handleDialogueLine = useCallback(
     (line: DialogueLine) => {
       setSpiritSpeaking(line.spiritId, true);
       if (line.emotion) setSpiritEmotion(line.spiritId, line.emotion as EmotionType);
 
-      addDialogue({
+      setCurrent({
         id: `${line.spiritId}-${Date.now()}`,
         spiritId: line.spiritId,
         text: line.text,
@@ -30,10 +30,14 @@ export function useSocket() {
       });
 
       // Auto-clear speaking after reading time
-      const readingTime = line.text.length * 60 + 1500;
-      setTimeout(() => setSpiritSpeaking(line.spiritId, false), readingTime);
+      const words = line.text.trim().split(/\s+/).filter(Boolean).length;
+      const readingTime = Math.max(1000, words * 800) + 600;
+      setTimeout(() => {
+        setSpiritSpeaking(line.spiritId, false);
+        setCurrent(null);
+      }, readingTime);
     },
-    [setSpiritSpeaking, setSpiritEmotion, addDialogue],
+    [setSpiritSpeaking, setSpiritEmotion, setCurrent],
   );
 
   useEffect(() => {

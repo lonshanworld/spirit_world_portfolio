@@ -6,13 +6,9 @@ import { ActiveDialogue } from '../../types/dialogue.types';
 
 interface DialogueBubbleProps {
   dialogue: ActiveDialogue;
-  onExpire: (id: string) => void;
 }
 
-// How long each bubble remains visible (ms)
-const BUBBLE_DURATION = 5500;
-
-export function DialogueBubble({ dialogue, onExpire }: DialogueBubbleProps) {
+export function DialogueBubble({ dialogue }: DialogueBubbleProps) {
   const def = SPIRIT_DEFINITIONS[dialogue.spiritId];
 
   return (
@@ -23,10 +19,6 @@ export function DialogueBubble({ dialogue, onExpire }: DialogueBubbleProps) {
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -12, scale: 0.9 }}
       transition={{ type: 'spring', stiffness: 180, damping: 18 }}
-      onAnimationComplete={() => {
-        // Schedule expiry after the bubble has been visible
-        setTimeout(() => onExpire(dialogue.id), BUBBLE_DURATION);
-      }}
       className="relative max-w-xs w-fit px-4 py-2.5 rounded-2xl text-sm leading-snug select-none"
       style={{
         background: `linear-gradient(135deg, ${def.primaryColor}22, ${def.secondaryColor}18)`,

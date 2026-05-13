@@ -4,18 +4,22 @@ import { useCallback, useEffect, useRef } from 'react';
 import { SpiritOrb } from './SpiritOrb';
 import { useWorldStore } from '../../store/worldStore';
 import { useThemeStore } from '../../store/themeStore';
-import { ElementType, SpiritInstance, SpiritInstanceId } from '../../types/spirit.types';
+import { ActiveTheme, ElementType, SpiritInstance, SpiritInstanceId } from '../../types/spirit.types';
 import { SPIRIT_DEFINITIONS } from '../../systems/elementData';
 import { THEMES } from '../../systems/themeEngine';
-import { getCombination } from '../../systems/combinationEngine';
+import { COMBINATION_WINDOW_MS, getCombination } from '../../systems/combinationEngine';
 import { useSound } from '../../hooks/useSound';
+
+const SPELL_THEME_DELAY_MS = 1850;
 
 interface SpiritManagerProps {
   onSpiritTap: (element: ElementType) => void;
   onSpiritClick: (element: ElementType) => void;
+  onSpiritHover?: (element: ElementType) => void;
+  onWorldSpell?: (theme: ActiveTheme) => void;
 }
 
-export function SpiritManager({ onSpiritTap, onSpiritClick }: SpiritManagerProps) {
+export function SpiritManager({ onSpiritTap, onSpiritClick, onSpiritHover, onWorldSpell }: SpiritManagerProps) {
   const spirits               = useWorldStore((s) => s.spirits);
   const setSpiritHovered       = useWorldStore((s) => s.setSpiritHovered);
   const setSpiritEmotion       = useWorldStore((s) => s.setSpiritEmotion);
@@ -23,9 +27,10 @@ export function SpiritManager({ onSpiritTap, onSpiritClick }: SpiritManagerProps
   const endCombat              = useWorldStore((s) => s.endCombat);
   const setSpiritCombatStatus  = useWorldStore((s) => s.setSpiritCombatStatus);
   const setSpiritEmotionById   = useWorldStore((s) => s.setSpiritEmotionById);
-  const tapSpirit          = useThemeStore((s) => s.tapSpirit);
-  const pendingCombination = useThemeStore((s) => s.pendingCombination);
-  const activeTheme        = useThemeStore((s) => s.activeTheme);
+  const tapSpirit              = useThemeStore((s) => s.tapSpirit);
+  const pendingCombination     = useThemeStore((s) => s.pendingCombination);
+  const activeTheme            = useThemeStore((s) => s.activeTheme);
+  const setTheme               = useThemeStore((s) => s.setTheme);
   const { playSpiritClick, playCombination } = useSound();
 
   // ── Keep a current-spirits ref so periodic effects can read without re-running ──
@@ -37,6 +42,8 @@ export function SpiritManager({ onSpiritTap, onSpiritClick }: SpiritManagerProps
   //  stale closure in handleTap without adding it as a dependency twice)
   const pendingRef = useRef<ElementType | null>(pendingCombination);
   useEffect(() => { pendingRef.current = pendingCombination; }, [pendingCombination]);
+  const lastTapAtRef = useRef(0);
+  const hoverMessageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Combat interrupt: hover or click a fighting spirit to calm it ──────────
   const breakCombatForSpirit = useCallback(
@@ -60,6 +67,12 @@ export function SpiritManager({ onSpiritTap, onSpiritClick }: SpiritManagerProps
 
   const handleTap = useCallback(
     (element: ElementType) => {
+      lastTapAtRef.current = Date.now();
+      if (hoverMessageTimerRef.current) {
+        clearTimeout(hoverMessageTimerRef.current);
+        hoverMessageTimerRef.current = null;
+      }
+
       // If the user taps a spirit in active combat, calm the fight instead
       for (const inst of spiritsRef.current.values()) {
         if (inst.element === element && inst.combatStatus !== 'idle') {
@@ -77,10 +90,12 @@ export function SpiritManager({ onSpiritTap, onSpiritClick }: SpiritManagerProps
           : null;
 
       if (hybrid) {
+        onWorldSpell?.(hybrid);
         playCombination();
         // Visual magic reaction: both spirits burst with excited spell + proud cooldown
         setSpiritEmotion(firstElement!, 'excited');
         setSpiritEmotion(element, 'excited');
+        setTimeout(() => setTheme(hybrid), SPELL_THEME_DELAY_MS);
         setTimeout(() => {
           setSpiritEmotion(firstElement!, 'proud');
           setSpiritEmotion(element, 'proud');
@@ -90,14 +105,34 @@ export function SpiritManager({ onSpiritTap, onSpiritClick }: SpiritManagerProps
           setSpiritEmotion(element, 'neutral');
         }, 4000);
       } else {
+        onWorldSpell?.(element);
         playSpiritClick(element);
+        setTimeout(() => {
+          const state = useThemeStore.getState();
+          if (
+            state.pendingCombination === element &&
+            Date.now() - state.pendingTapTime >= COMBINATION_WINDOW_MS - 100
+          ) {
+            setTheme(element);
+          }
+        }, Math.max(COMBINATION_WINDOW_MS, SPELL_THEME_DELAY_MS));
+        onSpiritClick(element);
       }
 
       onSpiritTap(element);
-      onSpiritClick(element);
       return result;
     },
-    [tapSpirit, onSpiritTap, onSpiritClick, playSpiritClick, playCombination, setSpiritEmotion, breakCombatForSpirit],
+    [
+      tapSpirit,
+      setTheme,
+      onSpiritTap,
+      onSpiritClick,
+      onWorldSpell,
+      playSpiritClick,
+      playCombination,
+      setSpiritEmotion,
+      breakCombatForSpirit,
+    ],
   );
 
   // ── Spirit-to-spirit proximity magic ───────────────────────────────────────
@@ -174,13 +209,36 @@ export function SpiritManager({ onSpiritTap, onSpiritClick }: SpiritManagerProps
       setSpiritHovered(instanceId, true);
       // Hovering a fighting spirit calms the combat immediately
       breakCombatForSpirit(instanceId);
+
+      // On touch devices hover can fire immediately before tap. Delay hover message
+      // briefly and cancel it if a tap arrives during this guard window.
+      if (!onSpiritHover) return;
+      if (hoverMessageTimerRef.current) clearTimeout(hoverMessageTimerRef.current);
+      hoverMessageTimerRef.current = setTimeout(() => {
+        if (Date.now() - lastTapAtRef.current < 220) return;
+        const inst = spiritsRef.current.get(instanceId);
+        if (inst) onSpiritHover(inst.element);
+      }, 120);
     },
-    [setSpiritHovered, breakCombatForSpirit],
+    [setSpiritHovered, breakCombatForSpirit, onSpiritHover],
   );
 
   const handleHoverEnd = useCallback(
-    (instanceId: SpiritInstanceId) => setSpiritHovered(instanceId, false),
+    (instanceId: SpiritInstanceId) => {
+      if (hoverMessageTimerRef.current) {
+        clearTimeout(hoverMessageTimerRef.current);
+        hoverMessageTimerRef.current = null;
+      }
+      setSpiritHovered(instanceId, false);
+    },
     [setSpiritHovered],
+  );
+
+  useEffect(
+    () => () => {
+      if (hoverMessageTimerRef.current) clearTimeout(hoverMessageTimerRef.current);
+    },
+    [],
   );
 
   const themeConfig = THEMES[activeTheme];

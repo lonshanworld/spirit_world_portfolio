@@ -19,7 +19,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useWorldStore } from '../../store/worldStore';
 import {
   ELEMENT_SPELLS,
@@ -30,7 +30,6 @@ import {
   getCombatLine,
   HIT_OUTCOMES,
 } from '../../systems/combatSystem';
-import { SPIRIT_DEFINITIONS } from '../../systems/elementData';
 import { SpiritInstance, SpiritInstanceId, ActiveCombat } from '../../types/spirit.types';
 import { CombatProjectile, ProjectileData } from './CombatProjectile';
 
@@ -44,56 +43,6 @@ const MAX_CONCURRENT_COMBATS = 2;
 
 /** How long (ms) between new combat event evaluations. */
 const COMBAT_INTERVAL_MS = 15_000; // ~15s base; jittered ±8s
-
-// ─── Dialogue overlay (combat speech) ────────────────────────────
-
-interface CombatSpeech {
-  id: string;
-  instanceId: SpiritInstanceId;
-  element: string;
-  text: string;
-  x: number;  // viewport %, approximate
-  y: number;
-}
-
-function CombatSpeechBubble({ speech, def }: {
-  speech: CombatSpeech;
-  def: { primaryColor: string; secondaryColor: string; glowColor: string; symbol: string; name: string };
-}) {
-  return (
-    <motion.div
-      key={speech.id}
-      style={{
-        position:    'fixed',
-        left:        `${speech.x}%`,
-        top:         `${speech.y}%`,
-        transform:   'translate(-50%, -120%)',
-        zIndex:      9990,
-        pointerEvents: 'none',
-        maxWidth:    160,
-        background:  `linear-gradient(135deg, ${def.primaryColor}28, ${def.secondaryColor}18)`,
-        border:      `1px solid ${def.primaryColor}66`,
-        borderRadius: 12,
-        padding:     '6px 10px',
-        backdropFilter: 'blur(10px)',
-        color:       def.primaryColor,
-        fontSize:    10,
-        fontWeight:  600,
-        textAlign:   'center',
-        boxShadow:   `0 2px 16px ${def.glowColor}`,
-      }}
-      initial={{ opacity: 0, scale: 0.7, y: 10 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.8, y: -8 }}
-      transition={{ type: 'spring', stiffness: 260, damping: 20 }}
-    >
-      <div style={{ fontSize: 8, opacity: 0.7, marginBottom: 2, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-        {def.symbol} {speech.element.toUpperCase()} SPIRIT
-      </div>
-      {speech.text}
-    </motion.div>
-  );
-}
 
 // ─── CombatManager ────────────────────────────────────────────────
 
@@ -112,7 +61,6 @@ export function CombatManager() {
   useEffect(() => { combatsRef.current = activeCombats; }, [activeCombats]);
 
   const [projectiles, setProjectiles]     = useState<ProjectileData[]>([]);
-  const [speechLines, setSpeechLines]     = useState<CombatSpeech[]>([]);
 
   // ── Helpers ──────────────────────────────────────────────────────
 
@@ -127,20 +75,10 @@ export function CombatManager() {
     };
   }, []);
 
-  const pushSpeech = useCallback((inst: SpiritInstance, text: string) => {
-    const id = `speech-${Date.now()}-${Math.random()}`;
-    setSpeechLines((prev) => [...prev, {
-      id,
-      instanceId: inst.instanceId,
-      element:    inst.element,
-      text,
-      x: inst.worldX,
-      y: inst.worldY,
-    }]);
-    setTimeout(() => {
-      setSpeechLines((prev) => prev.filter((s) => s.id !== id));
-    }, 3500);
-  }, []);
+  // Combat speech is now routed through the spirit's attached bubble
+  // (via dialogueStore / useSpiritDialogue queue) — no separate overlay needed.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const pushSpeech = useCallback((_inst: SpiritInstance, _text: string) => {}, []);
 
   // ── Combat event orchestration ───────────────────────────────────
 
@@ -371,19 +309,7 @@ export function CombatManager() {
         />
       ))}
 
-      {/* Combat speech bubbles */}
-      <AnimatePresence>
-        {speechLines.map((speech) => {
-          const def = SPIRIT_DEFINITIONS[speech.element as keyof typeof SPIRIT_DEFINITIONS];
-          return def ? (
-            <CombatSpeechBubble
-              key={speech.id}
-              speech={speech}
-              def={def}
-            />
-          ) : null;
-        })}
-      </AnimatePresence>
+
     </>
   );
 }
