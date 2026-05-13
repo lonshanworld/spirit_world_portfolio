@@ -1,0 +1,4 @@
+export const SPELL_START_DELAY_MS = 450;
+export const SPELL_DURATION_MS = 3200;
+export const SPELL_THEME_TRANSITION_MS = 800;
+export const SPELL_RECOVERY_BUFFER_MS = 500;

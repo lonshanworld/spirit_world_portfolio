@@ -7,15 +7,28 @@ import { SPIRIT_DEFINITIONS } from '../../systems/elementData';
 import { SpiritCreature } from './SpiritCreature';
 import { MagicEffect } from '../magic/MagicEffect';
 import { SpiritAura } from '../magic/SpiritAura';
+import { SpiritMagicSeal } from '../effects/SpiritMagicSeal';
 import { useDialogueStore } from '../../store/dialogueStore';
+
+const MOBILE_LONG_PRESS_MS = 420;
+const MOBILE_LONG_PRESS_FREEZE_MS = 1200;
+const MOBILE_LONG_PRESS_SEAL_MS = 760;
+const POINTER_RELEASE_LOCK_MS = 140;
 
 interface SpiritOrbProps {
   instance: SpiritInstance;
-  onTap: (element: ElementType) => void;
+  onTap: (element: ElementType, instanceId: SpiritInstanceId) => SpiritTapPlan;
   onHoverStart: (instanceId: SpiritInstanceId) => void;
   onHoverEnd: (instanceId: SpiritInstanceId) => void;
   /** Global spawn index — used to stagger reveal animations. */
   index: number;
+}
+
+export interface SpiritTapPlan {
+  mode: 'transform' | 'companion';
+  freezeMs: number;
+  sealVariant: 'full' | 'mini' | 'none';
+  sealMs: number;
 }
 
 const MOTION_CONFIGS: Record<string, { x: number[]; y: number[]; duration: number }> = {
@@ -151,13 +164,30 @@ export function SpiritOrb({
   const [wanderY, setWanderY] = useState(instance.worldY);
   const [facingLeft, setFacingLeft] = useState(false);
   const [isFrozen, setIsFrozen] = useState(false);
+  const [isPointerPressing, setIsPointerPressing] = useState(false);
+  const [frozenAnchor, setFrozenAnchor] = useState<{ leftPx: number; topPx: number } | null>(null);
+  const [isCasting, setIsCasting] = useState(false);
+  const [isSealVisible, setIsSealVisible] = useState(false);
+  const [sealVariant, setSealVariant] = useState<'full' | 'mini'>('full');
+  const [sealCastId, setSealCastId] = useState(0);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const freezeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sealTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressStartRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const suppressNextTapRef = useRef(false);
+  const suppressResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressTriggeredRef = useRef(false);
+  const hoverReleaseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pointerReleaseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevWanderX   = useRef(instance.worldX);
-  const isSpeakingRef = useRef(instance.isSpeaking);
-  const isHoveredRef  = useRef(instance.isHovered);
-  const isFrozenRef   = useRef(false);
-  useEffect(() => { isSpeakingRef.current = instance.isSpeaking; }, [instance.isSpeaking]);
-  useEffect(() => { isHoveredRef.current  = instance.isHovered;  }, [instance.isHovered]);
-  useEffect(() => { isFrozenRef.current   = isFrozen;            }, [isFrozen]);
+  const isMovementLockedRef = useRef(false);
+  const isAnchorLockedRef = useRef(false);
+
+  const isMovementLocked =
+    isFrozen || instance.isHovered || instance.isSpeaking || isSealVisible || isPointerPressing;
+
+  useEffect(() => { isMovementLockedRef.current = isMovementLocked; }, [isMovementLocked]);
+  useEffect(() => { isAnchorLockedRef.current = !!frozenAnchor;  }, [frozenAnchor]);
 
   // Track horizontal movement direction for body orientation
   useEffect(() => {
@@ -171,8 +201,8 @@ export function SpiritOrb({
     let cancelled = false;
 
     const moveTo = () => {
-      // Don't wander while talking, hovered, or frozen (click sequence)
-      if (!isSpeakingRef.current && !isHoveredRef.current && !isFrozenRef.current) {
+      // Don't pick a new wander target while an interaction, spell, or dialogue is active.
+      if (!isMovementLockedRef.current) {
         setWanderX(4 + Math.random() * 92);
         setWanderY(2 + Math.random() * 96);
       }
@@ -222,22 +252,28 @@ export function SpiritOrb({
     });
   }, [controls, motionCfg, def.motionSpeed, instance.personalityOffset, index]);
 
-  // Float: stop while hovered/frozen so the spirit "holds position"; restart on release.
+  // Float: stop while any action lock is active so the spirit literally holds position.
   // Scale is driven exclusively by whileInView (reacts to emotion changes automatically).
   useEffect(() => {
-    if (instance.isHovered || isFrozen) {
+    let resumeTimer: ReturnType<typeof setTimeout> | null = null;
+    if (isMovementLocked) {
       controls.stop();
     } else {
-      startFloating();
+      resumeTimer = setTimeout(() => {
+        startFloating();
+      }, 300);
     }
+    return () => {
+      if (resumeTimer) clearTimeout(resumeTimer);
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [instance.isHovered, isFrozen]);
+  }, [isMovementLocked]);
 
   // Combat animations — applied through controls; reset and restart float when done.
   useEffect(() => {
     if (instance.combatStatus === 'idle') {
       controls.start({ rotate: 0, transition: { duration: 0.4 } });
-      if (!isHoveredRef.current && !isFrozenRef.current) startFloating();
+      if (!isMovementLockedRef.current) startFloating();
     } else {
       controls.start(getCombatAnimate(instance.combatStatus) as Parameters<typeof controls.start>[0]);
     }
@@ -246,30 +282,144 @@ export function SpiritOrb({
 
   // Dialogue: single global slot — bubble shows on the speaking element only
   const currentDialogue = useDialogueStore((s) => s.current);
-  const activeDialogue  = currentDialogue?.spiritId === instance.element ? currentDialogue : null;
+  const activeDialogue = currentDialogue
+    && currentDialogue.spiritId === instance.element
+    && (!currentDialogue.spiritInstanceId || currentDialogue.spiritInstanceId === instance.instanceId)
+      ? currentDialogue
+      : null;
   const showBubble      = instance.isSpeaking && !!activeDialogue;
 
-  // Magic state
-  const [isTapped,   setIsTapped]   = useState(false);
-  const [isCasting,  setIsCasting]  = useState(false);
+  useEffect(
+    () => () => {
+      if (sealTimerRef.current) clearTimeout(sealTimerRef.current);
+      if (freezeTimerRef.current) clearTimeout(freezeTimerRef.current);
+      if (longPressStartRef.current) clearTimeout(longPressStartRef.current);
+      if (hoverReleaseTimerRef.current) clearTimeout(hoverReleaseTimerRef.current);
+      if (suppressResetTimerRef.current) clearTimeout(suppressResetTimerRef.current);
+      if (pointerReleaseTimerRef.current) clearTimeout(pointerReleaseTimerRef.current);
+    },
+    [],
+  );
+
+  const lockCurrentPosition = useCallback(() => {
+    const node = wrapperRef.current;
+    if (!node) return;
+
+    const parent = node.offsetParent as HTMLElement | null;
+    const leftPx = node.offsetLeft;
+    const topPx = node.offsetTop;
+    setFrozenAnchor({ leftPx, topPx });
+
+    if (parent && parent.clientWidth > 0 && parent.clientHeight > 0) {
+      const x = (leftPx / parent.clientWidth) * 100;
+      const y = (topPx / parent.clientHeight) * 100;
+      setWanderX(x);
+      setWanderY(y);
+      prevWanderX.current = x;
+    }
+  }, []);
+
+  const stopMovementNow = useCallback(() => {
+    lockCurrentPosition();
+    controls.stop();
+  }, [controls, lockCurrentPosition]);
+
+  useEffect(() => {
+    if (isMovementLocked) {
+      if (!isAnchorLockedRef.current) lockCurrentPosition();
+      controls.stop();
+      return;
+    }
+
+    if (isAnchorLockedRef.current) {
+      setFrozenAnchor(null);
+    }
+  }, [controls, isMovementLocked, lockCurrentPosition]);
+
+  const releasePointerPressSoon = useCallback(() => {
+    if (pointerReleaseTimerRef.current) clearTimeout(pointerReleaseTimerRef.current);
+    pointerReleaseTimerRef.current = setTimeout(() => {
+      setIsPointerPressing(false);
+      pointerReleaseTimerRef.current = null;
+    }, POINTER_RELEASE_LOCK_MS);
+  }, []);
+
+  const applyTapPlan = useCallback((plan: SpiritTapPlan) => {
+    lockCurrentPosition();
+    setIsFrozen(true);
+
+    if (freezeTimerRef.current) clearTimeout(freezeTimerRef.current);
+    freezeTimerRef.current = setTimeout(() => {
+      setIsFrozen(false);
+      setFrozenAnchor(null);
+      freezeTimerRef.current = null;
+    }, plan.freezeMs);
+
+    if (sealTimerRef.current) clearTimeout(sealTimerRef.current);
+    if (plan.sealVariant === 'none') {
+      setIsSealVisible(false);
+      return;
+    }
+
+    setSealVariant(plan.sealVariant);
+    setSealCastId((v) => v + 1);
+    setIsSealVisible(true);
+    sealTimerRef.current = setTimeout(() => {
+      setIsSealVisible(false);
+    }, plan.sealMs);
+  }, [lockCurrentPosition]);
+
+  const triggerMobileLongPressInteraction = useCallback(() => {
+    longPressTriggeredRef.current = true;
+    suppressNextTapRef.current = true;
+
+    if (suppressResetTimerRef.current) clearTimeout(suppressResetTimerRef.current);
+    suppressResetTimerRef.current = setTimeout(() => {
+      suppressNextTapRef.current = false;
+      longPressTriggeredRef.current = false;
+      suppressResetTimerRef.current = null;
+    }, 420);
+
+    onHoverStart(instance.instanceId);
+    applyTapPlan({
+      mode: 'companion',
+      freezeMs: MOBILE_LONG_PRESS_FREEZE_MS,
+      sealVariant: 'mini',
+      sealMs: MOBILE_LONG_PRESS_SEAL_MS,
+    });
+
+    if (hoverReleaseTimerRef.current) clearTimeout(hoverReleaseTimerRef.current);
+    hoverReleaseTimerRef.current = setTimeout(() => {
+      onHoverEnd(instance.instanceId);
+      hoverReleaseTimerRef.current = null;
+    }, MOBILE_LONG_PRESS_FREEZE_MS);
+  }, [applyTapPlan, instance.instanceId, onHoverEnd, onHoverStart]);
+
+  const clearLongPressStart = useCallback(() => {
+    if (longPressStartRef.current) {
+      clearTimeout(longPressStartRef.current);
+      longPressStartRef.current = null;
+    }
+  }, []);
 
   // Wander transition: always use the slow CSS glide.
   // NEVER snap to 'none' — that causes an instant jump to the wander target
   // because wanderX/Y is already set to the new position when the timer fires.
-  // New wander targets are blocked by isHoveredRef/isSpeakingRef/isFrozenRef guards.
+  // New wander targets are blocked by the movement lock guard.
   const wanderDuration = (22 + instance.personalityOffset * 16).toFixed(1);
   const wanderTransition = `left ${wanderDuration}s ease-in-out, top ${wanderDuration}s ease-in-out`;
 
   return (
     /* Wander wrapper — CSS-animated long-range movement through the world */
     <div
+      ref={wrapperRef}
       style={{
         position:   'absolute',
-        left:       `${wanderX}%`,
-        top:        `${wanderY}%`,
+        left:       frozenAnchor ? `${frozenAnchor.leftPx}px` : `${wanderX}%`,
+        top:        frozenAnchor ? `${frozenAnchor.topPx}px` : `${wanderY}%`,
         transform:  'translate(-50%, -50%)',
         zIndex:     30,
-        transition: wanderTransition,
+        transition: isMovementLocked || frozenAnchor ? 'none' : wanderTransition,
       }}
     >
       {/* ── Speech bubble — direct child of wander wrapper, outside all Framer Motion transforms.
@@ -296,20 +446,67 @@ export function SpiritOrb({
           damping:   12,
         }}
         onTap={() => {
-          onTap(instance.element);
-          // STEP 1: freeze movement for the click sequence duration
-          setIsFrozen(true);
-          setTimeout(() => setIsFrozen(false), 4500);
-          // STEP 3: trigger spell effect
-          setIsTapped(true);
-          setTimeout(() => setIsTapped(false), 350);
+          if (suppressNextTapRef.current) {
+            if (suppressResetTimerRef.current) {
+              clearTimeout(suppressResetTimerRef.current);
+              suppressResetTimerRef.current = null;
+            }
+            suppressNextTapRef.current = false;
+            longPressTriggeredRef.current = false;
+            return;
+          }
+
+          const plan = onTap(instance.element, instance.instanceId);
+          applyTapPlan(plan);
         }}
-        onHoverStart={() => onHoverStart(instance.instanceId)}
+        onPointerDown={(e) => {
+          setIsPointerPressing(true);
+          if (pointerReleaseTimerRef.current) {
+            clearTimeout(pointerReleaseTimerRef.current);
+            pointerReleaseTimerRef.current = null;
+          }
+          stopMovementNow();
+          if (e.pointerType !== 'touch') return;
+          longPressTriggeredRef.current = false;
+          clearLongPressStart();
+          longPressStartRef.current = setTimeout(() => {
+            longPressStartRef.current = null;
+            triggerMobileLongPressInteraction();
+          }, MOBILE_LONG_PRESS_MS);
+        }}
+        onPointerUp={(e) => {
+          releasePointerPressSoon();
+          if (e.pointerType !== 'touch') return;
+          clearLongPressStart();
+          if (longPressTriggeredRef.current) {
+            if (hoverReleaseTimerRef.current) {
+              clearTimeout(hoverReleaseTimerRef.current);
+              hoverReleaseTimerRef.current = null;
+            }
+            onHoverEnd(instance.instanceId);
+          }
+        }}
+        onPointerCancel={(e) => {
+          releasePointerPressSoon();
+          if (e.pointerType !== 'touch') return;
+          clearLongPressStart();
+          if (longPressTriggeredRef.current) {
+            if (hoverReleaseTimerRef.current) {
+              clearTimeout(hoverReleaseTimerRef.current);
+              hoverReleaseTimerRef.current = null;
+            }
+            onHoverEnd(instance.instanceId);
+          }
+        }}
+        onHoverStart={() => {
+          stopMovementNow();
+          onHoverStart(instance.instanceId);
+        }}
         onHoverEnd={() => onHoverEnd(instance.instanceId)}
         whileHover={{ scale: 1.18 }}
         whileTap={{ scale: 0.92 }}
         className="cursor-pointer select-none"
-        style={{ position: 'relative', overflow: 'visible' }}
+        style={{ position: 'relative', overflow: 'visible', touchAction: 'manipulation' }}
       >
         {/* ── Spirit creature body ── */}
         <div
@@ -332,10 +529,10 @@ export function SpiritOrb({
             emotion={instance.emotion}
             isSpeaking={instance.isSpeaking}
             isHovered={instance.isHovered}
-            isCasting={isCasting}
+            isCasting={isCasting || isSealVisible || isFrozen}
             size={def.size * instance.sizeVariant}
             instanceId={instance.instanceId}
-            facingLeft={facingLeft}
+            facingLeft={isFrozen ? false : facingLeft}
           />
         </div>
 
@@ -345,9 +542,19 @@ export function SpiritOrb({
           emotion={instance.emotion}
           isSpeaking={instance.isSpeaking}
           isHovered={instance.isHovered}
-          isTapped={isTapped}
+          isTapped={false}
           personalityOffset={instance.personalityOffset}
           onCastingChange={setIsCasting}
+        />
+
+        <SpiritMagicSeal
+          element={instance.element}
+          primaryColor={def.primaryColor}
+          secondaryColor={def.secondaryColor}
+          glowColor={def.glowColor}
+          visible={isSealVisible}
+          castId={sealCastId}
+          variant={sealVariant}
         />
 
         {/* ── Name badge (visible on hover) ── */}

@@ -21,18 +21,87 @@ import { io, Socket } from 'socket.io-client';
 import { useWorldStore } from '../store/worldStore';
 import { useDialogueStore } from '../store/dialogueStore';
 import { DialogueLine } from '../types/dialogue.types';
-import { ElementType, EmotionType } from '../types/spirit.types';
+import { ElementType, EmotionType, SpiritInstanceId } from '../types/spirit.types';
 import { SpiritEvents, WorldEvents } from '../types/socket.events';
 import { SPIRIT_CLICK_DRAMATIC, COMBINATION_LINES } from '../systems/dialogueScripts';
 import { useMessageCache } from '../store/messageCache';
 import { STATIC_MESSAGE_BATCH } from '../systems/messageBatch';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:3001';
+const HOVER_DIALOGUE_COOLDOWN_MS = 3000;
 
 const ALL_ELEMENTS: ElementType[] = [
   'fire', 'water', 'ice', 'wind', 'soil', 'trees',
   'lightning', 'dark', 'light', 'healing', 'void', 'space', 'time', 'robot',
 ];
+
+const SIGNATURE_INVOCATION_LINES: Record<ElementType, string> = {
+  fire: 'Let this world burn into eternal flame.',
+  water: 'I will wash this world into tranquility.',
+  ice: 'Everything shall freeze into silence.',
+  wind: 'Become one with the endless sky.',
+  soil: 'The earth itself shall awaken.',
+  trees: 'Life will bloom across this world.',
+  lightning: 'Feel the fury of the endless storm.',
+  dark: 'Darkness will consume everything.',
+  light: 'May divine light purify this world.',
+  healing: 'Let all wounds be restored.',
+  void: 'Reality itself will collapse.',
+  space: 'Become one with the infinite cosmos.',
+  time: 'Time itself bends to my will.',
+  robot: 'System override initiated.',
+};
+
+const COMPANION_TAP_LINES: Record<ElementType, string[]> = {
+  fire: ['Back for more flames?', 'The fire still burns.', 'Heh... you chose me again.'],
+  water: ['The tides welcome you back.', 'You seem calmer now.', 'Still flowing with me?'],
+  ice: ['Still seeking clear focus?', 'The frost remembers you.', 'Shall we keep things sharp and quiet?'],
+  wind: ['Back on the breeze already?', 'You move fast. I like that.', 'Ready for another light spin?'],
+  soil: ['Grounded as ever. Welcome back.', 'The earth listens when you return.', 'Steady choice. I respect it.'],
+  trees: ['The grove knew you would return.', 'Life still grows around you.', 'Shall we bloom again, softly?'],
+  lightning: ['Another round?', "You're addicted to speed, huh?", "Let's shake the world again."],
+  dark: ['You found your way back to shadow.', 'Darkness still answers you.', 'We walk the edge again.'],
+  light: ['Welcome back to the radiance.', 'Your path shines brighter now.', 'Let us glow a little more.'],
+  healing: ['Good to see you again.', 'Breathe. I am with you.', 'Let us restore your rhythm.'],
+  void: ['You return to the abyss...', 'Interesting choice.', 'Reality still trembles.'],
+  space: ['The cosmos noticed your return.', 'Still stargazing with me?', 'Orbit with me once more.'],
+  time: ['Ah, right on time.', 'We meet again in this moment.', 'Time remembers your choice.'],
+  robot: ['Connection re-established.', 'Welcome back, operator.', 'Companion mode active.'],
+};
+
+const COMPANION_REPEAT_LINES: Record<ElementType, string> = {
+  fire: 'You picked me again. I like your style.',
+  water: 'Again? Then let the current carry us.',
+  ice: 'Again. Consistency is power.',
+  wind: 'Again already? Keep up.',
+  soil: 'Again. Strong roots make strong choices.',
+  trees: 'Again. The forest welcomes that.',
+  lightning: 'Again? Nice. Keep the pace up.',
+  dark: 'Again... you are not afraid of the dark.',
+  light: 'Again. Your light is steady.',
+  healing: 'Again. Your heart is learning balance.',
+  void: 'Again. The abyss is amused.',
+  space: 'Again. The stars approve.',
+  time: 'Again. As expected.',
+  robot: 'Repeat selection detected. Optimal.',
+};
+
+const COMPANION_EMOTION: Record<ElementType, EmotionType> = {
+  fire: 'playful',
+  water: 'calm',
+  ice: 'curious',
+  wind: 'playful',
+  soil: 'calm',
+  trees: 'happy',
+  lightning: 'excited',
+  dark: 'mysterious',
+  light: 'happy',
+  healing: 'calm',
+  void: 'mysterious',
+  space: 'curious',
+  time: 'proud',
+  robot: 'curious',
+};
 
 /** One-time backend probe — does not maintain a connection. */
 async function isBackendReachable(): Promise<boolean> {
@@ -79,6 +148,7 @@ export function useSpiritDialogue() {
   const cancelledRef  = useRef(false);
   /** Recently interacted elements (newest first, max 5). */
   const recentRef     = useRef<ElementType[]>([]);
+  const hoverCooldownRef = useRef<Map<string, number>>(new Map());
 
   // Stable refs — prevent stale closures inside setTimeout callbacks
   const setSpeakingRef = useRef(setSpiritSpeaking);
@@ -93,6 +163,15 @@ export function useSpiritDialogue() {
 
   const lineQueueRef = useRef<DialogueLine[]>([]);
   const isShowingRef = useRef(false);
+  const activeLineTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const activeSpeakerRef = useRef<{ spiritId: ElementType; spiritInstanceId?: SpiritInstanceId } | null>(null);
+
+  const setSpeakingState = useCallback(
+    (spiritId: ElementType, speaking: boolean, spiritInstanceId?: SpiritInstanceId) => {
+      setSpeakingRef.current(spiritId, speaking, spiritInstanceId);
+    },
+    [],
+  );
 
   function processQueue() {
     if (cancelledRef.current || lineQueueRef.current.length === 0) {
@@ -104,22 +183,47 @@ export function useSpiritDialogue() {
     const words  = line.text.trim().split(/\s+/).filter(Boolean).length;
     const readMs = Math.max(1000, words * 800);
 
-    setSpeakingRef.current(line.spiritId, true);
+    activeSpeakerRef.current = { spiritId: line.spiritId, spiritInstanceId: line.spiritInstanceId };
+    setSpeakingState(line.spiritId, true, line.spiritInstanceId);
     if (line.emotion) setEmotionRef.current(line.spiritId, line.emotion as EmotionType);
     setCurrentRef.current({
       id:         `${line.spiritId}-${Date.now()}`,
       spiritId:   line.spiritId,
+      spiritInstanceId: line.spiritInstanceId,
       text:       line.text,
       timestamp:  Date.now(),
       targetUser: line.targetUser ?? false,
     });
-    setTimeout(() => {
+
+    activeLineTimerRef.current = setTimeout(() => {
       if (cancelledRef.current) return;
-      setSpeakingRef.current(line.spiritId, false);
+      setSpeakingState(line.spiritId, false, line.spiritInstanceId);
+      activeSpeakerRef.current = null;
+      activeLineTimerRef.current = null;
       setCurrentRef.current(null);
       processQueue();
     }, readMs + 600);
   }
+
+  const interruptWithLine = useCallback((line: DialogueLine) => {
+    if (activeLineTimerRef.current) {
+      clearTimeout(activeLineTimerRef.current);
+      activeLineTimerRef.current = null;
+    }
+    if (activeSpeakerRef.current) {
+      setSpeakingState(
+        activeSpeakerRef.current.spiritId,
+        false,
+        activeSpeakerRef.current.spiritInstanceId,
+      );
+      activeSpeakerRef.current = null;
+    }
+
+    setCurrentRef.current(null);
+    lineQueueRef.current = [line];
+    isShowingRef.current = false;
+    processQueue();
+  }, [setSpeakingState]);
 
   const enqueueLine = useCallback((line: DialogueLine) => {
     lineQueueRef.current.push(line);
@@ -167,18 +271,73 @@ export function useSpiritDialogue() {
     [enqueueLine],
   );
 
+  /** Signature invocation line for cinematic spell casting. Interrupts current queue. */
+  const triggerSpiritInvocation = useCallback((element: ElementType, spiritInstanceId?: SpiritInstanceId) => {
+    const text = SIGNATURE_INVOCATION_LINES[element];
+    if (!text) return;
+    interruptWithLine({
+      spiritId: element,
+      spiritInstanceId,
+      text,
+      emotion: 'proud',
+      delay: 0,
+      targetUser: true,
+    });
+    recentRef.current = [element, ...recentRef.current.slice(0, 4)];
+  }, [interruptWithLine]);
+
+  /** Companion tap line for same-theme interactions. Interrupts current queue for immediate feedback. */
+  const triggerSpiritCompanionTap = useCallback((element: ElementType, spiritInstanceId?: SpiritInstanceId) => {
+    const repeated = recentRef.current[0] === element;
+    const text = repeated
+      ? COMPANION_REPEAT_LINES[element]
+      : COMPANION_TAP_LINES[element][Math.floor(Math.random() * COMPANION_TAP_LINES[element].length)];
+
+    interruptWithLine({
+      spiritId: element,
+      spiritInstanceId,
+      text,
+      emotion: COMPANION_EMOTION[element],
+      delay: 0,
+      targetUser: true,
+    });
+
+    recentRef.current = [element, ...recentRef.current.slice(0, 4)];
+  }, [interruptWithLine]);
+
   /**
    * Hover reaction: shown only when the queue is empty.
    * Draws from the element's 'hover' pool in the cache.
    */
   const triggerHover = useCallback(
-    (element: ElementType) => {
-      if (isBusy()) return;
+    (element: ElementType, spiritInstanceId?: SpiritInstanceId) => {
+      const key = spiritInstanceId ?? element;
+      const now = Date.now();
+      const last = hoverCooldownRef.current.get(key) ?? 0;
+      if (now - last < HOVER_DIALOGUE_COOLDOWN_MS) return;
+      hoverCooldownRef.current.set(key, now);
+
       const line = pickCached(element, 'hover');
-      if (line) enqueueLine(line);
+      if (!line) return;
+
+      const hoverLine: DialogueLine = {
+        ...line,
+        spiritInstanceId,
+        targetUser: true,
+      };
+
+      const current = useDialogueStore.getState().current;
+      // If only background chatter is showing, hover should feel immediate.
+      if (current && !current.targetUser) {
+        interruptWithLine(hoverLine);
+        return;
+      }
+
+      if (isBusy()) return;
+      enqueueLine(hoverLine);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [enqueueLine],
+    [enqueueLine, interruptWithLine],
   );
 
   /**
@@ -309,11 +468,30 @@ export function useSpiritDialogue() {
         socketRef.current.disconnect();
         socketRef.current = null;
       }
+      if (activeLineTimerRef.current) {
+        clearTimeout(activeLineTimerRef.current);
+        activeLineTimerRef.current = null;
+      }
+      if (activeSpeakerRef.current) {
+        setSpiritSpeaking(
+          activeSpeakerRef.current.spiritId,
+          false,
+          activeSpeakerRef.current.spiritInstanceId,
+        );
+        activeSpeakerRef.current = null;
+      }
       lineQueueRef.current = [];
       isShowingRef.current = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return { triggerSpiritClick, triggerHover, triggerSection, triggerCombination };
+  return {
+    triggerSpiritClick,
+    triggerSpiritInvocation,
+    triggerSpiritCompanionTap,
+    triggerHover,
+    triggerSection,
+    triggerCombination,
+  };
 }

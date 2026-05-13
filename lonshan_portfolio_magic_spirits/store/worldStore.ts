@@ -18,7 +18,7 @@ interface WorldStore {
 
   // ── Element-type setters (used by WebSocket/backend events) ─────
   setSpiritEmotion: (element: ElementType, emotion: EmotionType) => void;
-  setSpiritSpeaking: (element: ElementType, speaking: boolean) => void;
+  setSpiritSpeaking: (element: ElementType, speaking: boolean, instanceId?: SpiritInstanceId) => void;
 
   // ── Instance-level setters ───────────────────────────────────────
   setSpiritHovered: (instanceId: SpiritInstanceId, hovered: boolean) => void;
@@ -57,9 +57,15 @@ export const useWorldStore = create<WorldStore>((set) => ({
       return { spirits };
     }),
 
-  setSpiritSpeaking: (element, speaking) =>
+  setSpiritSpeaking: (element, speaking, instanceId) =>
     set((state) => {
       const spirits = new Map(state.spirits);
+      if (instanceId) {
+        const target = spirits.get(instanceId);
+        if (target) spirits.set(instanceId, { ...target, isSpeaking: speaking });
+        return { spirits };
+      }
+
       for (const [id, inst] of spirits) {
         if (inst.element === element) {
           spirits.set(id, { ...inst, isSpeaking: speaking });
