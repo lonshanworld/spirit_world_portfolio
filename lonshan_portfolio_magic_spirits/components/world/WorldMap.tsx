@@ -8,8 +8,11 @@ import { useSound } from '../../hooks/useSound';
 import { useWorldStore } from '../../store/worldStore';
 
 const WORLD_AREAS = [
-  { label: 'Projects',  href: '#memory-garden' },
+  { label: 'Personal Info', href: '#hero' },
   { label: 'Skills',    href: '#elemental-archive' },
+  { label: 'AI Chat',   href: '#astral-terminal' },
+  { label: 'Work History', href: '#chronicle-hall' },
+  { label: 'Projects',  href: '#memory-garden' },
   { label: 'Contact',   href: '#void-portal' },
 ] as const;
 
@@ -30,7 +33,7 @@ export function WorldMap() {
   return (
     <motion.nav
       aria-label="World map"
-      className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 transition-all duration-500"
+      className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between gap-3 px-3 sm:px-4 lg:px-6 py-3 sm:py-4 transition-all duration-500 overflow-x-clip"
       style={{
         background: scrolled ? config?.cardBg : 'transparent',
         borderBottom: scrolled ? `1px solid ${config?.cardBorder}` : 'none',
@@ -40,16 +43,37 @@ export function WorldMap() {
       {/* World sigil */}
       <a
         href="#hero"
-        className="flex items-center gap-2 text-sm font-black tracking-[0.25em] uppercase"
+        className="flex min-w-0 items-center gap-2 text-[10px] sm:text-xs lg:text-sm font-black tracking-[0.12em] sm:tracking-[0.22em] uppercase whitespace-nowrap"
         style={{ color: config?.primaryColor, textShadow: `0 0 12px ${config?.glowColor}` }}
         aria-label="Spirit World — return to entrance"
       >
         <span aria-hidden="true" className="text-base">✦</span>
         Spirit World
       </a>
+      <div
+        className="xl:hidden min-w-0 flex-1 flex justify-center"
+        aria-label={`Active realm: ${config?.label}`}
+      >
+        <div
+          className="max-w-full inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] sm:text-xs font-bold uppercase tracking-[0.14em] sm:tracking-[0.18em]"
+          style={{
+            color: config?.primaryColor,
+            borderColor: `${config?.primaryColor}55`,
+            background: config?.cardBg,
+            boxShadow: `0 0 14px ${config?.glowColor}55`,
+          }}
+        >
+          <span
+            className="h-1.5 w-1.5 shrink-0 rounded-full animate-pulse"
+            style={{ background: config?.primaryColor, boxShadow: `0 0 8px ${config?.glowColor}` }}
+            aria-hidden="true"
+          />
+          <span className="min-w-0 truncate">{config?.label}</span>
+        </div>
+      </div>
 
       {/* World area links — desktop */}
-      <div className="hidden md:flex items-center gap-8" role="list">
+      <div className="hidden xl:flex items-center gap-5 2xl:gap-8" role="list">
         {WORLD_AREAS.map((area) => {
           const isActive = area.href === `#${activeSection}`;
           return (
@@ -86,7 +110,7 @@ export function WorldMap() {
       </div>
 
       {/* Active element indicator + sound toggle */}
-      <div className="hidden md:flex items-center gap-3">
+      <div className="hidden xl:flex items-center gap-3">
         <div
           className="flex items-center gap-2 text-xs font-medium tracking-widest uppercase"
           style={{ color: config?.primaryColor }}
@@ -120,7 +144,7 @@ export function WorldMap() {
 
       {/* Mobile hamburger */}
       <button
-        className="md:hidden flex flex-col gap-1.5 p-2"
+        className="xl:hidden flex flex-col gap-1.5 p-2"
         onClick={() => setMenuOpen((v) => !v)}
         aria-label="Toggle world map"
         aria-expanded={menuOpen}
@@ -143,7 +167,7 @@ export function WorldMap() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.18 }}
-            className="absolute top-full left-0 right-0 flex flex-col gap-0 md:hidden"
+            className="absolute top-full left-0 right-0 flex flex-col gap-0 xl:hidden"
             style={{
               background: config?.cardBg,
               borderBottom: `1px solid ${config?.cardBorder}`,

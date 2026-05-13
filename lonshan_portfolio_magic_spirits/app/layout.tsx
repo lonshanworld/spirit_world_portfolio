@@ -17,6 +17,11 @@ export const metadata: Metadata = {
   description:
     "An AI-powered magical portfolio inhabited by elemental spirits. Tap a spirit to transform the world.",
   keywords: ["portfolio", "fullstack", "developer", "AI", "interactive", "magical"],
+  icons: {
+    icon: "/icon.svg",
+    shortcut: "/icon.svg",
+    apple: "/icon.svg",
+  },
   openGraph: {
     title: "Living Elemental Portfolio",
     description: "A realtime AI-powered portfolio ecosystem with elemental spirits.",

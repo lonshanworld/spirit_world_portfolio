@@ -2,7 +2,7 @@
  * spiritPopulation.ts
  *
  * Spawns named spirit individuals from the SPIRIT_PERSONALITIES pool.
- * Always spawns exactly 2 spirits per element type = 28 spirits total.
+ * Always spawns exactly 3 spirits per element type = 42 spirits total.
  *
  * Design principles:
  *  - Named individuals feel alive; no two sessions are identical
@@ -15,12 +15,25 @@ import { SpiritInstance, SpiritInstanceId } from '../types/spirit.types';
 import { SPIRIT_DEFINITIONS } from './elementData';
 import { SPIRIT_PERSONALITIES } from '../data/spiritPersonalities';
 
-/** Golden-ratio scrambling distributes Y positions evenly across the document. */
-const GOLDEN = 0.618033988749895;
+/**
+ * Section-aware Y distribution.
+ * We divide the full document height into equal vertical bands so spirits
+ * exist across top/middle/bottom sections more consistently.
+ */
+const WORLD_VERTICAL_BANDS = 6; // hero, ai, projects, work, skills, contact
 
-function goldenY(index: number): number {
-  const raw = ((index * GOLDEN) % 1) * 100;
-  return Math.min(97, Math.max(3, raw + (Math.random() * 14 - 7)));
+function distributedY(index: number, total: number): number {
+  // Rotate assignment so each session feels alive but still evenly spread.
+  const offset = Math.floor(Math.random() * WORLD_VERTICAL_BANDS);
+  const band = (index + offset) % WORLD_VERTICAL_BANDS;
+
+  // Keep each spirit away from hard band edges for smoother visual spread.
+  const withinBand = 0.1 + Math.random() * 0.8;
+  const y = ((band + withinBand) / WORLD_VERTICAL_BANDS) * 100;
+
+  // Tiny global-index jitter prevents vertical "rows" when many spirits exist.
+  const jitter = ((index / Math.max(1, total - 1)) - 0.5) * 2.4;
+  return Math.min(97, Math.max(3, y + jitter));
 }
 
 function randomX(): number {
@@ -31,20 +44,20 @@ function randomX(): number {
 
 /**
  * Creates all spirit instances for the current session.
- * Picks exactly 2 spirits per element type (28 spirits total = 14 types × 2).
+ * Picks exactly 3 spirits per element type (42 spirits total = 14 types × 3).
  * Positions are spread across the full document height.
  */
 export function spawnSpiritInstances(): Map<SpiritInstanceId, SpiritInstance> {
   const map = new Map<SpiritInstanceId, SpiritInstance>();
 
-  // Group personalities by element, then take the first 2 from each group
+  // Group personalities by element, then take the first 3 from each group
   const byElement = new Map<string, typeof SPIRIT_PERSONALITIES>();
   for (const pers of SPIRIT_PERSONALITIES) {
     if (!byElement.has(pers.element)) byElement.set(pers.element, []);
     byElement.get(pers.element)!.push(pers);
   }
 
-  const chosen = Array.from(byElement.values()).flatMap((group) => group.slice(0, 2));
+  const chosen = Array.from(byElement.values()).flatMap((group) => group.slice(0, 3));
 
   chosen.forEach((pers, globalIndex) => {
     const def            = SPIRIT_DEFINITIONS[pers.element];
@@ -62,7 +75,7 @@ export function spawnSpiritInstances(): Map<SpiritInstanceId, SpiritInstance> {
       sizeVariant:       Math.max(0.9, Math.min(1.0, (pers.sizeVariant ?? 1.0) * (def.size ?? 1.0) * (0.90 + Math.random() * 0.10))),
       personalityOffset: Math.random(),
       worldX:            randomX(),
-      worldY:            goldenY(globalIndex),
+      worldY:            distributedY(globalIndex, chosen.length),
       combatStatus:      'idle',
     });
   });

@@ -18,7 +18,9 @@ import { ThemeTransition } from '../components/theme/ThemeTransition';
 
 // Portfolio sections
 import { HeroSection } from '../components/portfolio/HeroSection';
+import { AIChatSection } from '../components/portfolio/AIChatSection';
 import { ProjectsSection } from '../components/portfolio/ProjectsSection';
+import { ExperienceSection } from '../components/portfolio/ExperienceSection';
 import { SkillsSection } from '../components/portfolio/SkillsSection';
 import { ContactSection } from '../components/portfolio/ContactSection';
 
@@ -143,8 +145,11 @@ function WorldOrchestrator() {
 
       {/* Spirit world layer — ABSOLUTE so spirits roam the entire scrollable document.
           Spirits at worldY > 100% appear in sections below the hero as you scroll. */}
-      <div className="absolute inset-0 z-20 pointer-events-none overflow-visible">
-        <div className="pointer-events-auto w-full h-full relative">
+      <div
+        className="absolute inset-0 z-20 pointer-events-none"
+        style={{ overflowX: 'clip', overflowY: 'visible' }}
+      >
+        <div className="pointer-events-none w-full h-full relative">
           <SpiritManager
             onSpiritTap={handleSpiritTap}
             onSpiritInvocation={handleSpiritInvocation}
@@ -163,8 +168,10 @@ function WorldOrchestrator() {
         <WorldMap />
         <main>
           <HeroSection />
-          <ProjectsSection />
           <SkillsSection />
+          <AIChatSection />
+          <ExperienceSection />
+          <ProjectsSection />
           <ContactSection />
         </main>
       </div>
@@ -185,7 +192,7 @@ export default function Home() {
       />
 
       <motion.div
-        className="relative min-h-screen"
+        className="relative min-h-screen overflow-x-clip"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}

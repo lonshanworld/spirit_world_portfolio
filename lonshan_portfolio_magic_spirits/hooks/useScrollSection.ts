@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { useWorldStore } from '../store/worldStore';
 
-const SECTIONS = ['hero', 'memory-garden', 'elemental-archive', 'void-portal'];
+const SECTIONS = ['hero', 'astral-terminal', 'memory-garden', 'chronicle-hall', 'elemental-archive', 'void-portal'];
 
 export function useScrollSection(onSectionChange: (section: string) => void) {
   const setActiveSection = useWorldStore((s) => s.setActiveSection);

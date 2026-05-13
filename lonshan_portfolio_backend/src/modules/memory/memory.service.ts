@@ -1,17 +1,9 @@
 /**
  * memory.service.ts
- * Persistent conversation history backed by PostgreSQL.
+ * Conversation history backed by PostgreSQL only.
  *
- * When DATABASE_URL is configured: all lines are written to the
- * dialogue_history table (created automatically on startup).
- * Rows beyond the ring-buffer limits are pruned after each insert
- * so the table never grows unboundedly.
- *
- * When DATABASE_URL is NOT configured: falls back to a tiny in-memory
- * ring buffer so the system still works during local development without
- * a database.
- *
- * RAM cost when using PostgreSQL: essentially zero — no JS arrays kept in RAM.
+ * If DATABASE_URL is unavailable or DB queries fail, history persistence
+ * is skipped gracefully and empty history is returned.
  */
 import { Injectable, Logger } from '@nestjs/common';
 import { ElementType } from '../spirits/interfaces/spirit.interface';
@@ -26,39 +18,30 @@ const PER_SPIRIT_MAX = 5;
 export class MemoryService {
   private readonly logger = new Logger(MemoryService.name);
 
-  // Tiny in-memory fallback used only when DB is unavailable
-  private fallbackGlobal: RecentHistoryLine[] = [];
-  private fallbackSpirit = new Map<ElementType, string[]>();
-
   constructor(private readonly db: DatabaseService) {}
 
   // ── Write ────────────────────────────────────────────────────────
 
   async addLine(spiritId: ElementType, speakerName: string, text: string): Promise<void> {
     if (this.db.isReady) {
-      await this.db.query(
+      const inserted = await this.db.query(
         `INSERT INTO dialogue_history (spirit_id, speaker_name, text)
          VALUES ($1, $2, $3)`,
         [spiritId, speakerName, text],
       );
+      if (!inserted) {
+        return;
+      }
 
       // Prune global ring: keep only the last GLOBAL_MAX rows
-      await this.db.query(
+      const pruned = await this.db.query(
         `DELETE FROM dialogue_history
          WHERE id NOT IN (
            SELECT id FROM dialogue_history ORDER BY id DESC LIMIT $1
          )`,
         [GLOBAL_MAX],
       );
-    } else {
-      // Fallback: plain in-memory ring
-      this.fallbackGlobal.push({ speakerName, text });
-      if (this.fallbackGlobal.length > GLOBAL_MAX) this.fallbackGlobal.shift();
-
-      const perSpirit = this.fallbackSpirit.get(spiritId) ?? [];
-      perSpirit.push(text);
-      if (perSpirit.length > PER_SPIRIT_MAX) perSpirit.shift();
-      this.fallbackSpirit.set(spiritId, perSpirit);
+      if (!pruned) return;
     }
   }
 
@@ -81,7 +64,7 @@ export class MemoryService {
         text: r.text,
       }));
     }
-    return this.fallbackGlobal.slice(-n);
+    return [];
   }
 
   /** Last lines spoken by a specific spirit (for de-duplication) */
@@ -98,16 +81,13 @@ export class MemoryService {
       if (!result) return [];
       return result.rows.map((r) => r.text);
     }
-    return this.fallbackSpirit.get(spiritId) ?? [];
+    return [];
   }
 
   /** Called on new session — clears DB history for this visitor's session */
   async clear(): Promise<void> {
     if (this.db.isReady) {
       await this.db.query(`DELETE FROM dialogue_history`);
-    } else {
-      this.fallbackGlobal = [];
-      this.fallbackSpirit.clear();
     }
   }
 }

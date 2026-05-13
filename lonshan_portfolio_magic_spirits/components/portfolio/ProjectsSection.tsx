@@ -31,7 +31,7 @@ export function ProjectsSection() {
   const config = THEMES[activeTheme];
 
   return (
-    <section id="memory-garden" aria-label="Creator's projects" className="relative py-32 px-6">
+    <section id="memory-garden" aria-label="Creator's projects" className="relative py-16 sm:py-28 px-4 sm:px-6 overflow-hidden">
       {/* Ambient section glow */}
       <div
         aria-hidden="true"
@@ -55,13 +55,13 @@ export function ProjectsSection() {
           transition={{ duration: 0.7 }}
         >
           <p
-            className="text-xs font-bold tracking-[0.5em] uppercase mb-3"
+            className="text-[11px] sm:text-xs font-bold tracking-[0.28em] sm:tracking-[0.5em] uppercase mb-3"
             style={{ color: config?.accentColor }}
           >
-            ✦ Creator's Work
+            ✦ Creator&apos;s Work
           </p>
           <h2
-            className="text-4xl md:text-5xl font-black mb-3"
+            className="text-3xl sm:text-4xl md:text-5xl font-black mb-3"
             style={{ color: config?.textColor, textShadow: `0 0 30px ${config?.glowColor}` }}
           >
             Projects
@@ -79,7 +79,7 @@ export function ProjectsSection() {
           {PROJECTS.map((project, i) => (
             <motion.article
               key={project.id}
-              className="group relative rounded-2xl p-7 flex flex-col gap-4 overflow-hidden transition-all duration-300 hover:scale-[1.02]"
+              className="group relative rounded-2xl p-4 sm:p-7 flex flex-col gap-4 overflow-hidden transition-all duration-300 hover:scale-[1.02] min-w-0"
               onClick={() => project.link ? window.open(project.link, '_blank', 'noopener,noreferrer') : undefined}
               style={{
                 cursor: project.link ? 'pointer' : 'default',
@@ -122,9 +122,9 @@ export function ProjectsSection() {
 
               {/* Content */}
               <div className="flex flex-col gap-2 flex-1">
-                <div className="flex items-start justify-between gap-2">
+                <div className="flex items-start justify-between gap-2 min-w-0">
                   <h3
-                    className="text-xl font-bold leading-snug"
+                    className="text-lg sm:text-xl font-bold leading-snug min-w-0 break-words"
                     style={{ color: config?.textColor }}
                   >
                     {project.title}
@@ -140,7 +140,7 @@ export function ProjectsSection() {
                   )}
                 </div>
                 <p
-                  className="text-sm leading-relaxed"
+                className="text-sm leading-relaxed break-words"
                   style={{ color: config?.subtextColor }}
                 >
                   {project.description}

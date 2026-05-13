@@ -1,7 +1,7 @@
 'use client';
 
 import { motion, useAnimation, AnimatePresence } from 'framer-motion';
-import { useEffect, useCallback, useState, useRef } from 'react';
+import { useEffect, useCallback, useState, useRef, useMemo } from 'react';
 import { ElementType, EmotionType, SpiritInstance, SpiritInstanceId, SpiritDefinition, CombatStatus } from '../../types/spirit.types';
 import { SPIRIT_DEFINITIONS } from '../../systems/elementData';
 import { SpiritCreature } from './SpiritCreature';
@@ -39,6 +39,57 @@ const MOTION_CONFIGS: Record<string, { x: number[]; y: number[]; duration: numbe
   pulse:   { x: [0,  2,  0,  -2, 0], y: [0,  -4,  -1,  -4,  0], duration: 20 },
   spin:    { x: [0,  7,  0,  -7, 0], y: [0,  -4, -10,  -4,  0], duration: 28 },
 };
+
+interface MovementProfile {
+  roamDelayMinMs: number;
+  roamDelayMaxMs: number;
+  glideMinSec: number;
+  glideMaxSec: number;
+  lingerChance: number;
+  lingerMinMs: number;
+  lingerMaxMs: number;
+  floatAmpX: number;
+  floatAmpY: number;
+  floatDurationMul: number;
+}
+
+const BASE_PROFILE: MovementProfile = {
+  roamDelayMinMs: 36000,
+  roamDelayMaxMs: 90000,
+  glideMinSec: 60,
+  glideMaxSec: 92,
+  lingerChance: 0.26,
+  lingerMinMs: 5000,
+  lingerMaxMs: 14000,
+  floatAmpX: 0.55,
+  floatAmpY: 0.55,
+  floatDurationMul: 1.35,
+};
+
+const ELEMENT_MOVEMENT_PROFILES: Record<ElementType, Partial<MovementProfile>> = {
+  fire:      { roamDelayMinMs: 33000, roamDelayMaxMs: 72000, glideMinSec: 60, glideMaxSec: 84, lingerChance: 0.22, floatAmpX: 0.62, floatAmpY: 0.66, floatDurationMul: 1.2 },
+  water:     { roamDelayMinMs: 42000, roamDelayMaxMs: 96000, glideMinSec: 62, glideMaxSec: 104, lingerChance: 0.34, floatAmpX: 0.48, floatAmpY: 0.52, floatDurationMul: 1.6 },
+  ice:       { roamDelayMinMs: 46000, roamDelayMaxMs: 102000, glideMinSec: 66, glideMaxSec: 110, lingerChance: 0.42, floatAmpX: 0.38, floatAmpY: 0.36, floatDurationMul: 1.8 },
+  wind:      { roamDelayMinMs: 32000, roamDelayMaxMs: 70000, glideMinSec: 60, glideMaxSec: 82, lingerChance: 0.18, floatAmpX: 0.68, floatAmpY: 0.62, floatDurationMul: 1.15 },
+  soil:      { roamDelayMinMs: 52000, roamDelayMaxMs: 112000, glideMinSec: 70, glideMaxSec: 118, lingerChance: 0.5, floatAmpX: 0.32, floatAmpY: 0.3, floatDurationMul: 2.0 },
+  trees:     { roamDelayMinMs: 45000, roamDelayMaxMs: 98000, glideMinSec: 64, glideMaxSec: 106, lingerChance: 0.4, floatAmpX: 0.44, floatAmpY: 0.5, floatDurationMul: 1.75 },
+  lightning: { roamDelayMinMs: 30000, roamDelayMaxMs: 68000, glideMinSec: 60, glideMaxSec: 78, lingerChance: 0.16, floatAmpX: 0.72, floatAmpY: 0.74, floatDurationMul: 1.05 },
+  dark:      { roamDelayMinMs: 44000, roamDelayMaxMs: 98000, glideMinSec: 62, glideMaxSec: 104, lingerChance: 0.36, floatAmpX: 0.42, floatAmpY: 0.48, floatDurationMul: 1.7 },
+  light:     { roamDelayMinMs: 42000, roamDelayMaxMs: 94000, glideMinSec: 60, glideMaxSec: 100, lingerChance: 0.34, floatAmpX: 0.46, floatAmpY: 0.54, floatDurationMul: 1.65 },
+  healing:   { roamDelayMinMs: 47000, roamDelayMaxMs: 104000, glideMinSec: 68, glideMaxSec: 112, lingerChance: 0.44, floatAmpX: 0.36, floatAmpY: 0.42, floatDurationMul: 1.85 },
+  void:      { roamDelayMinMs: 43000, roamDelayMaxMs: 97000, glideMinSec: 64, glideMaxSec: 106, lingerChance: 0.36, floatAmpX: 0.4, floatAmpY: 0.46, floatDurationMul: 1.72 },
+  space:     { roamDelayMinMs: 52000, roamDelayMaxMs: 112000, glideMinSec: 72, glideMaxSec: 122, lingerChance: 0.48, floatAmpX: 0.34, floatAmpY: 0.44, floatDurationMul: 1.95 },
+  time:      { roamDelayMinMs: 47000, roamDelayMaxMs: 102000, glideMinSec: 68, glideMaxSec: 112, lingerChance: 0.42, floatAmpX: 0.4, floatAmpY: 0.42, floatDurationMul: 1.82 },
+  robot:     { roamDelayMinMs: 40000, roamDelayMaxMs: 90000, glideMinSec: 60, glideMaxSec: 94, lingerChance: 0.3, floatAmpX: 0.3, floatAmpY: 0.28, floatDurationMul: 1.6 },
+};
+
+function mergeProfile(element: ElementType): MovementProfile {
+  return { ...BASE_PROFILE, ...(ELEMENT_MOVEMENT_PROFILES[element] ?? {}) };
+}
+
+function scalePath(values: number[], factor: number): number[] {
+  return values.map((v) => Math.round(v * factor * 100) / 100);
+}
 
 function getEmotionScale(emotion: EmotionType): number {
   switch (emotion) {
@@ -97,7 +148,7 @@ function SpiritAttachedBubble({
         bottom: '110%',
         left: '50%',
         transform: 'translateX(-50%)',
-        width: '210px',
+        width: 'min(210px, calc(100vw - 32px))',
         // Solid opaque background so text is always readable on any backdrop
         background: 'rgba(10, 10, 18, 0.92)',
         border: `1.5px solid ${def.primaryColor}`,
@@ -111,11 +162,11 @@ function SpiritAttachedBubble({
     >
       {/* Spirit name tag */}
       <div
-        className="flex items-center gap-1 mb-1.5 text-[9px] font-bold tracking-widest uppercase"
+        className="flex items-center gap-1 mb-1.5 text-[9px] font-bold tracking-widest uppercase min-w-0"
         style={{ color: def.primaryColor }}
       >
         <span className="text-[11px]">{def.symbol}</span>
-        <span>{def.name}</span>
+        <span className="truncate">{def.name}</span>
         {dialogue.targetUser && (
           <span className="ml-1 px-1 rounded-full text-[8px]"
             style={{ background: `${def.primaryColor}33`, color: def.primaryColor }}>
@@ -126,7 +177,7 @@ function SpiritAttachedBubble({
 
       {/* Dialogue text */}
       <p
-        className="text-[12px] font-medium leading-relaxed"
+        className="text-[12px] font-medium leading-relaxed break-words"
         style={{ color: '#ffffff', textShadow: `0 0 8px ${def.glowColor}` }}
       >
         {dialogue.text}
@@ -157,6 +208,7 @@ export function SpiritOrb({
   const def      = SPIRIT_DEFINITIONS[instance.element];
   const controls = useAnimation();
   const motionCfg = MOTION_CONFIGS[def.motionPattern] ?? MOTION_CONFIGS.float;
+  const moveProfile = useMemo(() => mergeProfile(instance.element), [instance.element]);
 
   // Long-range wander: changes base position every 18–35s
   // Spirits wander immediately on mount, then pause while speaking.
@@ -170,6 +222,8 @@ export function SpiritOrb({
   const [isSealVisible, setIsSealVisible] = useState(false);
   const [sealVariant, setSealVariant] = useState<'full' | 'mini'>('full');
   const [sealCastId, setSealCastId] = useState(0);
+  const [viewportWidth, setViewportWidth] = useState(1280);
+  const [heightSpeedMul, setHeightSpeedMul] = useState(1);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const freezeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sealTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -186,8 +240,42 @@ export function SpiritOrb({
   const isMovementLocked =
     isFrozen || instance.isHovered || instance.isSpeaking || isSealVisible || isPointerPressing;
 
+  const isMobile = viewportWidth < 768;
+  const isTablet = viewportWidth >= 768 && viewportWidth < 1024;
+  const deviceMotionMul = isMobile ? 1.45 : isTablet ? 1.22 : 1;
+  const horizontalPadPercent = isMobile ? 14 : isTablet ? 9 : 6;
+  const boundedWanderX = Math.min(100 - horizontalPadPercent, Math.max(horizontalPadPercent, wanderX));
+
   useEffect(() => { isMovementLockedRef.current = isMovementLocked; }, [isMovementLocked]);
   useEffect(() => { isAnchorLockedRef.current = !!frozenAnchor;  }, [frozenAnchor]);
+  useEffect(() => {
+    const update = () => setViewportWidth(window.innerWidth);
+    update();
+    window.addEventListener('resize', update, { passive: true });
+    return () => window.removeEventListener('resize', update);
+  }, [deviceMotionMul, index, instance.personalityOffset, moveProfile]);
+
+  useEffect(() => {
+    const updateHeightSpeed = () => {
+      const viewportH = Math.max(window.innerHeight, 1);
+      const docH = Math.max(
+        document.documentElement.scrollHeight,
+        document.body.scrollHeight,
+        viewportH,
+      );
+      const pageScreens = docH / viewportH;
+      setHeightSpeedMul(Math.min(1.75, Math.max(1, 0.82 + pageScreens * 0.09)));
+    };
+
+    updateHeightSpeed();
+    window.addEventListener('resize', updateHeightSpeed, { passive: true });
+    window.addEventListener('load', updateHeightSpeed, { once: true });
+    const timer = window.setTimeout(updateHeightSpeed, 800);
+    return () => {
+      window.removeEventListener('resize', updateHeightSpeed);
+      window.clearTimeout(timer);
+    };
+  }, []);
 
   // Track horizontal movement direction for body orientation
   useEffect(() => {
@@ -203,7 +291,8 @@ export function SpiritOrb({
     const moveTo = () => {
       // Don't pick a new wander target while an interaction, spell, or dialogue is active.
       if (!isMovementLockedRef.current) {
-        setWanderX(4 + Math.random() * 92);
+        const edgePad = viewportWidth < 768 ? 14 : viewportWidth < 1024 ? 9 : 6;
+        setWanderX(edgePad + Math.random() * (100 - edgePad * 2));
         setWanderY(2 + Math.random() * 96);
       }
     };
@@ -216,10 +305,21 @@ export function SpiritOrb({
 
     let nextTimer: ReturnType<typeof setTimeout>;
     const schedule = () => {
-      const delay = (18000 + Math.random() * 17000) * (0.85 + instance.personalityOffset * 0.3);
+      const baseDelay =
+        moveProfile.roamDelayMinMs + Math.random() * (moveProfile.roamDelayMaxMs - moveProfile.roamDelayMinMs);
+      const personalityJitter = 0.9 + instance.personalityOffset * 0.28;
+      const delay = baseDelay * personalityJitter * deviceMotionMul * heightSpeedMul;
       nextTimer = setTimeout(() => {
         if (cancelled) return;
-        moveTo();
+        const shouldLinger = Math.random() < moveProfile.lingerChance;
+        if (shouldLinger) {
+          const linger = moveProfile.lingerMinMs + Math.random() * (moveProfile.lingerMaxMs - moveProfile.lingerMinMs);
+          setTimeout(() => {
+            if (!cancelled) moveTo();
+          }, linger);
+        } else {
+          moveTo();
+        }
         schedule();
       }, delay);
     };
@@ -235,9 +335,9 @@ export function SpiritOrb({
   // Short-range float animation — speed is fixed; emotion shows through eyes/face only
   const startFloating = useCallback(async () => {
     const cfg = {
-      x:        motionCfg.x,
-      y:        motionCfg.y,
-      duration: motionCfg.duration / def.motionSpeed,
+      x:        scalePath(motionCfg.x, moveProfile.floatAmpX),
+      y:        scalePath(motionCfg.y, moveProfile.floatAmpY),
+      duration: (motionCfg.duration / def.motionSpeed) * moveProfile.floatDurationMul * deviceMotionMul,
     };
     await controls.start({
       x: cfg.x,
@@ -250,7 +350,17 @@ export function SpiritOrb({
         delay:      index * 0.35 + instance.personalityOffset * 0.8,
       },
     });
-  }, [controls, motionCfg, def.motionSpeed, instance.personalityOffset, index]);
+  }, [
+    controls,
+    motionCfg,
+    def.motionSpeed,
+    instance.personalityOffset,
+    index,
+    moveProfile.floatAmpX,
+    moveProfile.floatAmpY,
+    moveProfile.floatDurationMul,
+    deviceMotionMul,
+  ]);
 
   // Float: stop while any action lock is active so the spirit literally holds position.
   // Scale is driven exclusively by whileInView (reacts to emotion changes automatically).
@@ -317,7 +427,7 @@ export function SpiritOrb({
       setWanderY(y);
       prevWanderX.current = x;
     }
-  }, []);
+  }, [heightSpeedMul, viewportWidth]);
 
   const stopMovementNow = useCallback(() => {
     lockCurrentPosition();
@@ -406,8 +516,9 @@ export function SpiritOrb({
   // NEVER snap to 'none' — that causes an instant jump to the wander target
   // because wanderX/Y is already set to the new position when the timer fires.
   // New wander targets are blocked by the movement lock guard.
-  const wanderDuration = (22 + instance.personalityOffset * 16).toFixed(1);
-  const wanderTransition = `left ${wanderDuration}s ease-in-out, top ${wanderDuration}s ease-in-out`;
+  const roamBaseSec = moveProfile.glideMinSec + instance.personalityOffset * (moveProfile.glideMaxSec - moveProfile.glideMinSec);
+  const wanderDuration = (roamBaseSec * deviceMotionMul * heightSpeedMul).toFixed(1);
+  const wanderTransition = `left ${wanderDuration}s cubic-bezier(0.22, 0.61, 0.36, 1), top ${wanderDuration}s cubic-bezier(0.22, 0.61, 0.36, 1)`;
 
   return (
     /* Wander wrapper — CSS-animated long-range movement through the world */
@@ -415,7 +526,8 @@ export function SpiritOrb({
       ref={wrapperRef}
       style={{
         position:   'absolute',
-        left:       frozenAnchor ? `${frozenAnchor.leftPx}px` : `${wanderX}%`,
+        pointerEvents: 'auto',
+        left:       frozenAnchor ? `${frozenAnchor.leftPx}px` : `${boundedWanderX}%`,
         top:        frozenAnchor ? `${frozenAnchor.topPx}px` : `${wanderY}%`,
         transform:  'translate(-50%, -50%)',
         zIndex:     30,

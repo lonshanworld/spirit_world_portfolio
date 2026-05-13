@@ -49,27 +49,19 @@ export class SpiritsGateway
     client.emit(WorldEvents.STATE, {
       spirits: this.spiritsService.getAllStates(),
     });
-
-    // §1 Batch mode: greeting + pre-generated idle cache — sent to this client only
-    this.initClientDialogue(client).catch((err) =>
-      this.logger.error('initClientDialogue error', err),
-    );
   }
 
-  /** §1 Send greeting then a batch of cached idle lines to the newly connected client. */
+  /** AI augmentation is opt-in so a normal reload does not burn model quota. */
   private async initClientDialogue(client: Socket): Promise<void> {
-    await new Promise<void>((r) => setTimeout(r, 2500));
     if (!client.connected) return;
-    await this.dialogueService.generateGreeting((line) => this.emitDialogueLine(line));
-    const batch = await this.dialogueService.generateBatch(10);
+    const batch = await this.dialogueService.generateBatch(2);
     if (client.connected) client.emit(SpiritEvents.BATCH_RESPONSE, batch);
   }
 
-  /** §1 Client requests a fresh batch when its local cache runs low. */
+  /** Client may request a tiny AI augmentation batch; frontend normally uses static dialogue. */
   @SubscribeMessage(SpiritEvents.BATCH_REQUEST)
   async handleBatchRequest(@ConnectedSocket() client: Socket): Promise<void> {
-    const lines = await this.dialogueService.generateBatch(8);
-    client.emit(SpiritEvents.BATCH_RESPONSE, lines);
+    await this.initClientDialogue(client);
   }
 
   handleDisconnect(client: Socket): void {
@@ -99,10 +91,7 @@ export class SpiritsGateway
     @MessageBody() data: SectionVisibleDto,
     @ConnectedSocket() _client: Socket,
   ): Promise<void> {
-    await this.dialogueService.generateSectionDialogue(
-      data.section,
-      (line) => this.emitDialogueLine(line),
-    );
+    this.worldContextService.setSection(data.section);
   }
 
   /** Two spirits were combined by the visitor */
@@ -147,7 +136,7 @@ export class SpiritsGateway
 
     // Auto-clear speaking flag using word-count duration (matches frontend queue)
     const words = line.text.trim().split(/\s+/).filter(Boolean).length;
-    const readMs = Math.max(1000, words * 800) + 600;
+    const readMs = Math.max(1000, words * 400);
     setTimeout(
       () => this.spiritsService.setSpeaking(line.spiritId, false),
       readMs,

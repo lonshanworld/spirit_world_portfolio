@@ -1,11 +1,11 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import { useState } from 'react';
 import { useThemeStore } from '../../store/themeStore';
 import { THEMES } from '../../systems/themeEngine';
 import { CONTACT_LINKS } from '../../data/portfolio_data';
 
-// Animated SVG summoning circle
 function SummoningCircle({ primaryColor, accentColor, glowColor }: {
   primaryColor: string | undefined;
   accentColor: string | undefined;
@@ -26,7 +26,6 @@ function SummoningCircle({ primaryColor, accentColor, glowColor }: {
       className="w-48 h-48"
       style={{ filter: `drop-shadow(0 0 12px ${glowColor ?? p}44)` }}
     >
-      {/* Outer rotating ring */}
       <motion.circle
         r={72}
         fill="none"
@@ -37,7 +36,6 @@ function SummoningCircle({ primaryColor, accentColor, glowColor }: {
         animate={{ rotate: 360 }}
         transition={{ duration: 22, repeat: Infinity, ease: 'linear' }}
       />
-      {/* Inner counter-rotating ring */}
       <motion.circle
         r={52}
         fill="none"
@@ -48,7 +46,6 @@ function SummoningCircle({ primaryColor, accentColor, glowColor }: {
         animate={{ rotate: -360 }}
         transition={{ duration: 16, repeat: Infinity, ease: 'linear' }}
       />
-      {/* Innermost pulsing circle */}
       <motion.circle
         r={34}
         fill="none"
@@ -58,7 +55,6 @@ function SummoningCircle({ primaryColor, accentColor, glowColor }: {
         animate={{ scale: [1, 1.06, 1], opacity: [0.4, 0.7, 0.4] }}
         transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
       />
-      {/* Cardinal rune marks */}
       {runePoints.map((pt, i) => (
         <motion.circle
           key={i}
@@ -70,7 +66,6 @@ function SummoningCircle({ primaryColor, accentColor, glowColor }: {
           transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut', delay: i * 0.3 }}
         />
       ))}
-      {/* Center crystal */}
       <motion.circle
         r={4}
         fill={p}
@@ -85,9 +80,82 @@ export function ContactSection() {
   const activeTheme = useThemeStore((s) => s.activeTheme);
   const config = THEMES[activeTheme];
 
+  const [formData, setFormData] = useState({ email: '', title: '', description: '' });
+  const [errors, setErrors] = useState<string[]>([]);
+  const [status, setStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
+  const [message, setMessage] = useState('');
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  const copyContactValue = async (field: string, value: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopiedField(field);
+      setTimeout(() => {
+        setCopiedField((prev) => (prev === field ? null : prev));
+      }, 1500);
+    } catch {
+      setCopiedField(null);
+    }
+  };
+
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const validationErrors: string[] = [];
+    if (!formData.email.trim()) {
+      validationErrors.push('Email is required.');
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      validationErrors.push('Please provide a valid email.');
+    }
+    if (!formData.title.trim() && !formData.description.trim()) {
+      validationErrors.push('Please provide a subject or message.');
+    }
+    if (validationErrors.length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
+
+    setErrors([]);
+    setStatus('sending');
+    setMessage('');
+    try {
+      const accessKey = process.env.NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY ?? '';
+      if (!accessKey) {
+        setStatus('error');
+        setMessage('Form is not configured. Set NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY.');
+        return;
+      }
+
+      const res = await fetch('https://api.web3forms.com/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({
+          access_key: accessKey,
+          from_email: formData.email,
+          subject: formData.title || 'New message from portfolio',
+          message: formData.description || formData.title,
+          email: formData.email,
+          title: formData.title,
+          description: formData.description,
+        }),
+      });
+      const result = await res.json();
+      if (result.success) {
+        setStatus('success');
+        setMessage('Message sent successfully. Thank you.');
+        setFormData({ email: '', title: '', description: '' });
+      } else {
+        setStatus('error');
+        setMessage('Failed to send message. Please try again.');
+      }
+    } catch {
+      setStatus('error');
+      setMessage('Network error. Please try again or email directly.');
+    }
+  };
+
   return (
-    <section id="void-portal" aria-label="Contact — get in touch" className="relative py-32 px-6">
-      {/* Ambient glow */}
+    <section id="void-portal" aria-label="Contact - get in touch" className="relative py-16 sm:py-28 px-4 sm:px-6 overflow-hidden">
       <div
         aria-hidden="true"
         className="absolute inset-0 pointer-events-none flex items-center justify-center overflow-hidden"
@@ -101,7 +169,6 @@ export function ContactSection() {
       </div>
 
       <div className="max-w-2xl mx-auto text-center">
-        {/* Location header */}
         <motion.div
           className="mb-12"
           initial={{ opacity: 0, y: 30 }}
@@ -110,13 +177,13 @@ export function ContactSection() {
           transition={{ duration: 0.7 }}
         >
           <p
-            className="text-xs font-bold tracking-[0.5em] uppercase mb-3"
+            className="text-[11px] sm:text-xs font-bold tracking-[0.28em] sm:tracking-[0.5em] uppercase mb-3"
             style={{ color: config?.accentColor }}
           >
-            ✦ Get In Touch
+            Get In Touch
           </p>
           <h2
-            className="text-4xl md:text-5xl font-black mb-4"
+            className="text-3xl sm:text-4xl md:text-5xl font-black mb-4"
             style={{ color: config?.textColor, textShadow: `0 0 30px ${config?.glowColor}` }}
           >
             Contact
@@ -125,11 +192,10 @@ export function ContactSection() {
             className="text-sm leading-relaxed max-w-sm mx-auto"
             style={{ color: config?.subtextColor, opacity: 0.65 }}
           >
-            Open to new opportunities. Send a message and let's talk.
+            Open to new opportunities. Send a message and let&apos;s talk.
           </p>
         </motion.div>
 
-        {/* Summoning circle */}
         <motion.div
           className="flex justify-center mb-10"
           initial={{ opacity: 0, scale: 0.8 }}
@@ -144,7 +210,6 @@ export function ContactSection() {
           />
         </motion.div>
 
-        {/* Invocation links */}
         <motion.div
           className="flex flex-col gap-3 mb-12"
           initial={{ opacity: 0 }}
@@ -153,12 +218,9 @@ export function ContactSection() {
           transition={{ delay: 0.3, duration: 0.6 }}
         >
           {CONTACT_LINKS.map((c, i) => (
-            <motion.a
+            <motion.div
               key={c.label}
-              href={c.href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-4 p-4 rounded-2xl transition-all duration-300 hover:scale-[1.02] group"
+              className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-2xl transition-all duration-300 hover:scale-[1.02] group min-w-0"
               style={{
                 background: config?.cardBg,
                 border: `1px solid ${config?.cardBorder}`,
@@ -172,33 +234,115 @@ export function ContactSection() {
                 borderColor: config?.primaryColor,
               }}
             >
-              <span className="text-2xl" aria-hidden="true">{c.symbol}</span>
-              <div className="text-left">
+              <span className="text-xl sm:text-2xl shrink-0" aria-hidden="true">{c.symbol}</span>
+              <a
+                href={c.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-left flex-1 min-w-0"
+              >
                 <div
-                  className="text-xs font-bold tracking-widest uppercase"
+                  className="text-[11px] sm:text-xs font-bold tracking-widest uppercase"
                   style={{ color: config?.accentColor }}
                 >
                   {c.label}
                 </div>
                 <div
-                  className="text-sm font-medium"
+                  className="text-xs sm:text-sm font-medium break-all"
                   style={{ color: config?.subtextColor }}
                 >
                   {c.value}
                 </div>
+              </a>
+              <div className="ml-auto flex shrink-0 items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => copyContactValue(c.label, c.value)}
+                  className="text-[11px] sm:text-xs px-2 py-1 rounded-md border transition-colors"
+                  style={{
+                    borderColor: config?.cardBorder,
+                    color: copiedField === c.label ? '#86efac' : config?.subtextColor,
+                    background: copiedField === c.label ? 'rgba(134, 239, 172, 0.12)' : 'transparent',
+                  }}
+                  aria-label={`Copy ${c.label}`}
+                >
+                  {copiedField === c.label ? 'Copied' : 'Copy'}
+                </button>
+                <span
+                  className="text-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                  style={{ color: config?.primaryColor }}
+                  aria-hidden="true"
+                >
+                  {'->'}
+                </span>
               </div>
-              <span
-                className="ml-auto text-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                style={{ color: config?.primaryColor }}
-                aria-hidden="true"
-              >
-                →
-              </span>
-            </motion.a>
+            </motion.div>
           ))}
         </motion.div>
 
-        {/* World closing inscription */}
+        <motion.form
+          onSubmit={onSubmit}
+          className="text-left rounded-2xl p-4 sm:p-5 border mb-10 space-y-4"
+          style={{ background: config?.cardBg, borderColor: config?.cardBorder }}
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+        >
+          <h3 className="text-lg font-bold" style={{ color: config?.textColor }}>
+            Send Message
+          </h3>
+          <input
+            type="email"
+            placeholder="Your email"
+            value={formData.email}
+            onChange={(e) => setFormData((p) => ({ ...p, email: e.target.value }))}
+            className="w-full rounded-lg px-3 py-2 text-sm bg-black/20 border outline-none"
+            style={{ borderColor: config?.cardBorder, color: config?.textColor }}
+            disabled={status === 'sending'}
+          />
+          <input
+            type="text"
+            placeholder="Subject"
+            value={formData.title}
+            onChange={(e) => setFormData((p) => ({ ...p, title: e.target.value }))}
+            className="w-full rounded-lg px-3 py-2 text-sm bg-black/20 border outline-none"
+            style={{ borderColor: config?.cardBorder, color: config?.textColor }}
+            disabled={status === 'sending'}
+          />
+          <textarea
+            rows={4}
+            placeholder="Message"
+            value={formData.description}
+            onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))}
+            className="w-full rounded-lg px-3 py-2 text-sm bg-black/20 border outline-none resize-none"
+            style={{ borderColor: config?.cardBorder, color: config?.textColor }}
+            disabled={status === 'sending'}
+          />
+          {errors.length > 0 && (
+            <div className="text-sm space-y-1" style={{ color: '#fca5a5' }}>
+              {errors.map((err) => (
+                <p key={err}>- {err}</p>
+              ))}
+            </div>
+          )}
+          {message && (
+            <p className="text-sm" style={{ color: status === 'success' ? '#86efac' : '#fca5a5' }}>
+              {message}
+            </p>
+          )}
+          <button
+            type="submit"
+            disabled={status === 'sending'}
+            className="w-full rounded-lg px-4 py-2 text-sm font-bold disabled:opacity-50"
+            style={{
+              background: `linear-gradient(135deg, ${config?.primaryColor}, ${config?.accentColor})`,
+              color: '#000',
+            }}
+          >
+            {status === 'sending' ? 'Sending...' : 'Send Message'}
+          </button>
+        </motion.form>
+
         <motion.p
           className="text-xs tracking-widest uppercase"
           style={{ color: config?.subtextColor, opacity: 0.35 }}
@@ -212,4 +356,3 @@ export function ContactSection() {
     </section>
   );
 }
-

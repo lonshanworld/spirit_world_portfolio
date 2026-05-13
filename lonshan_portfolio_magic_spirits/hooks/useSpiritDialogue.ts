@@ -137,6 +137,19 @@ function getVisibleElements(): ElementType[] {
   return visible;
 }
 
+function pickVisibleFirst(candidates: ElementType[]): ElementType | null {
+  const visible = getVisibleElements();
+  const visibleSet = new Set<ElementType>(visible);
+  const visibleCandidates = candidates.filter((c) => visibleSet.has(c));
+  if (visibleCandidates.length > 0) {
+    return visibleCandidates[Math.floor(Math.random() * visibleCandidates.length)];
+  }
+  if (visible.length > 0) {
+    return visible[Math.floor(Math.random() * visible.length)];
+  }
+  return null;
+}
+
 export function useSpiritDialogue() {
   const setSpiritSpeaking = useWorldStore((s) => s.setSpiritSpeaking);
   const setSpiritEmotion  = useWorldStore((s) => s.setSpiritEmotion);
@@ -159,7 +172,7 @@ export function useSpiritDialogue() {
   useEffect(() => { setCurrentRef.current  = setCurrent;        }, [setCurrent]);
 
   // ── Serialised line queue ─────────────────────────────────────
-  // Messages shown ONE AT A TIME. Duration = max(1 s, words × 0.8 s) + 0.6 s fade.
+  // Messages shown ONE AT A TIME. Duration = max(1 s, words × 0.4 s).
 
   const lineQueueRef = useRef<DialogueLine[]>([]);
   const isShowingRef = useRef(false);
@@ -181,7 +194,7 @@ export function useSpiritDialogue() {
     const line = lineQueueRef.current.shift()!;
     isShowingRef.current = true;
     const words  = line.text.trim().split(/\s+/).filter(Boolean).length;
-    const readMs = Math.max(1000, words * 800);
+    const readMs = Math.max(1000, words * 400);
 
     activeSpeakerRef.current = { spiritId: line.spiritId, spiritInstanceId: line.spiritInstanceId };
     setSpeakingState(line.spiritId, true, line.spiritInstanceId);
@@ -202,7 +215,7 @@ export function useSpiritDialogue() {
       activeLineTimerRef.current = null;
       setCurrentRef.current(null);
       processQueue();
-    }, readMs + 600);
+    }, readMs);
   }
 
   const interruptWithLine = useCallback((line: DialogueLine) => {
@@ -353,7 +366,8 @@ export function useSpiritDialogue() {
         contact:  ['healing', 'light', 'water'],
       };
       const candidates = (sectionSpirits[section] ?? ALL_ELEMENTS) as ElementType[];
-      const element    = candidates[Math.floor(Math.random() * candidates.length)];
+      const element    = pickVisibleFirst(candidates);
+      if (!element) return;
       const line       = pickCached(element, 'section');
       if (line) enqueueLine(line);
       // Notify backend for context tracking only (no dialogue response expected)
@@ -385,14 +399,24 @@ export function useSpiritDialogue() {
     // STEP 1: Populate cache from static dataset immediately (sync, no await)
     useMessageCache.getState().initialize(STATIC_MESSAGE_BATCH);
 
-    // STEP 2: Welcoming line after 2 s (draws from cache)
+    // STEP 2: Welcoming line quickly after load so the world feels alive
     greetTimerRef.current = setTimeout(() => {
       if (cancelledRef.current) return;
       const greetElements: ElementType[] = ['healing', 'light', 'space', 'void'];
-      const el   = greetElements[Math.floor(Math.random() * greetElements.length)];
+      const el = pickVisibleFirst(greetElements);
+      if (!el) return;
       const line = pickCached(el, 'idle');
       if (line) enqueueLine({ ...line, targetUser: true });
-    }, 2000);
+    }, 1200);
+
+    // Safety greeting: if nothing is currently visible by ~3s, force one line.
+    const safetyGreetTimer = setTimeout(() => {
+      if (cancelledRef.current || isBusy()) return;
+      const fallbackElement = pickVisibleFirst(['healing', 'light', 'space', 'void']);
+      if (!fallbackElement) return;
+      const line = pickCached(fallbackElement, 'idle');
+      if (line) enqueueLine({ ...line, targetUser: true });
+    }, 2900);
 
     // STEP 3: Backend probe — connect only to fetch AI augmentation batch
     isBackendReachable().then((live) => {
@@ -435,19 +459,13 @@ export function useSpiritDialogue() {
       idleTimerRef.current = setTimeout(() => {
         if (cancelledRef.current) return;
 
-        // Priority: 60 % visible, 25 % recent, 15 % random
+        // Visible-only policy: autonomous lines must target spirits in view
         const visible = getVisibleElements();
-        const recent  = recentRef.current;
-        const rand    = Math.random();
-        let element: ElementType;
-
-        if (visible.length > 0 && rand < 0.60) {
-          element = visible[Math.floor(Math.random() * visible.length)];
-        } else if (recent.length > 0 && rand < 0.85) {
-          element = recent[Math.floor(Math.random() * recent.length)];
-        } else {
-          element = ALL_ELEMENTS[Math.floor(Math.random() * ALL_ELEMENTS.length)];
+        if (visible.length === 0) {
+          scheduleIdle();
+          return;
         }
+        const element = visible[Math.floor(Math.random() * visible.length)];
 
         const line = pickCached(element, 'idle');
         if (line) enqueueLine(line);
@@ -461,6 +479,7 @@ export function useSpiritDialogue() {
     return () => {
       cancelledRef.current = true;
       if (greetTimerRef.current) clearTimeout(greetTimerRef.current);
+      clearTimeout(safetyGreetTimer);
       if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
       if (socketRef.current) {
         socketRef.current.off(SpiritEvents.BATCH_RESPONSE);

@@ -18,7 +18,21 @@ import { PromptBuilder } from './prompt.builder';
 // ── Throttle constants ─────────────────────────────────────────────
 const MIN_SPIRIT_COOLDOWN_MS = 8_000;  // minimum gap between two lines from same spirit
 const MAX_CONCURRENT = 2;              // max simultaneous Gemini requests
-const GEMINI_MODEL = 'gemini-3.1-flash-lite';
+const GEMINI_MODEL = 'gemini-2.5-flash-lite';
+const NON_DIEGETIC_PATTERNS: RegExp[] = [
+  /\bthe user\b/i,
+  /\buser is asking\b/i,
+  /\bhe is asking\b/i,
+  /\bshe is asking\b/i,
+  /\bas an ai\b/i,
+  /\bassistant\b/i,
+  /\bsystem prompt\b/i,
+  /\bhere is (a|the) response\b/i,
+  /\bcontext:\b/i,
+  /\bmetadata\b/i,
+  /\brole:\b/i,
+  /\bconstraints?:\b/i,
+];
 
 // ── Static fallback pool ───────────────────────────────────────────
 // Used when AI is unavailable — keeps the world feeling alive
@@ -109,8 +123,10 @@ export class AIService {
           generationConfig: { maxOutputTokens: 120, temperature: 0.88, topP: 0.92 },
         });
 
-        const result = await m.generateContent(userPrompt);
-        text = this.cleanResponse(result.response.text());
+        const safePrompt = userPrompt.replace(/<\|think\|>/gi, '').trim();
+        const result = await m.generateContent(safePrompt);
+        const cleaned = this.cleanResponse(result.response.text());
+        text = cleaned || this.getFallback(spiritId);
       } catch (err) {
         this.logger.error(`Gemini generation failed for ${spiritId}:`, err);
         text = this.getFallback(spiritId);
@@ -160,7 +176,8 @@ export class AIService {
         generationConfig: { maxOutputTokens: 400, temperature: 0.90, topP: 0.93 },
       });
 
-      const result = await m.generateContent(userPrompt);
+      const safePrompt = userPrompt.replace(/<\|think\|>/gi, '').trim();
+      const result = await m.generateContent(safePrompt);
       const raw = result.response.text();
       return this.parseConversation(raw, speakers, count);
     } catch (err) {
@@ -175,14 +192,23 @@ export class AIService {
 
   /** Strip markdown, quotes, and excessive whitespace from AI response */
   private cleanResponse(raw: string): string {
-    return raw
+    const withoutThoughtTags = raw
+      .replace(/<\|channel\|>\s*thought[\s\S]*?<\|channel\|>/gi, ' ')
+      .replace(/<\|?think\|?>[\s\S]*?<\|\/?think\|?>/gi, ' ')
+      .replace(/<\|?thought\|?>[\s\S]*?<\|\/?thought\|?>/gi, ' ');
+
+    const cleaned = withoutThoughtTags
       .replace(/^["']|["']$/g, '')            // strip surrounding quotes
       .replace(/\*\*/g, '')                    // strip bold markdown
       .replace(/\*/g, '')                      // strip italics
+      .replace(/^\s*(assistant|system|narrator)\s*:\s*/i, '')
       .replace(/#{1,6}\s/g, '')               // strip heading markers
       .replace(/\n+/g, ' ')                   // collapse newlines
       .trim()
       .slice(0, 200);                          // hard cap
+    if (!cleaned) return '';
+    if (NON_DIEGETIC_PATTERNS.some((p) => p.test(cleaned))) return '';
+    return cleaned;
   }
 
   /**

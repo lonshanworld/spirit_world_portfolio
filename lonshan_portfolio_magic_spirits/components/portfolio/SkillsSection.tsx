@@ -10,7 +10,7 @@ export function SkillsSection() {
   const config = THEMES[activeTheme];
 
   return (
-    <section id="elemental-archive" aria-label="Creator's skills" className="relative py-32 px-6">
+    <section id="elemental-archive" aria-label="Creator's skills" className="relative py-16 sm:py-28 px-4 sm:px-6 overflow-hidden">
       {/* Ambient glow */}
       <div
         aria-hidden="true"
@@ -34,13 +34,13 @@ export function SkillsSection() {
           transition={{ duration: 0.7 }}
         >
           <p
-            className="text-xs font-bold tracking-[0.5em] uppercase mb-3"
+            className="text-[11px] sm:text-xs font-bold tracking-[0.28em] sm:tracking-[0.5em] uppercase mb-3"
             style={{ color: config?.accentColor }}
           >
-            ✦ Creator's Skills
+            ✦ Creator&apos;s Skills
           </p>
           <h2
-            className="text-4xl md:text-5xl font-black mb-3"
+            className="text-3xl sm:text-4xl md:text-5xl font-black mb-3"
             style={{ color: config?.textColor, textShadow: `0 0 30px ${config?.glowColor}` }}
           >
             Skills
@@ -54,11 +54,11 @@ export function SkillsSection() {
         </motion.div>
 
         {/* Discipline tablets */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 sm:gap-8">
           {SKILLS.map((cat, ci) => (
             <motion.div
               key={cat.label}
-              className="relative rounded-2xl p-6 flex flex-col gap-5 overflow-hidden"
+              className="relative rounded-2xl p-4 sm:p-6 flex flex-col gap-5 overflow-hidden min-w-0"
               style={{
                 background: config?.cardBg,
                 border: `1px solid ${config?.cardBorder}`,
@@ -77,10 +77,10 @@ export function SkillsSection() {
               />
 
               {/* Discipline label */}
-              <div className="flex items-center gap-3">
-                <span className="text-2xl" aria-hidden="true">{cat.symbol}</span>
+              <div className="flex items-center gap-3 min-w-0">
+                <span className="text-2xl shrink-0" aria-hidden="true">{cat.symbol}</span>
                 <h3
-                  className="text-base font-bold tracking-wide uppercase"
+                  className="text-sm sm:text-base font-bold tracking-wide uppercase break-words min-w-0"
                   style={{ color: config?.textColor }}
                 >
                   {cat.label}
@@ -91,9 +91,9 @@ export function SkillsSection() {
               <div className="flex flex-col gap-4">
                 {cat.skills.map((skill, si) => (
                   <div key={skill.name}>
-                    <div className="flex justify-between mb-1.5">
+                    <div className="flex justify-between gap-3 mb-1.5 min-w-0">
                       <span
-                        className="text-sm font-medium"
+                        className="text-sm font-medium min-w-0 break-words"
                         style={{ color: config?.subtextColor }}
                       >
                         {skill.name}

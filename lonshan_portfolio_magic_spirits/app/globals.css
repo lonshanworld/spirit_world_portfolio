@@ -28,6 +28,9 @@
 html {
   scroll-behavior: smooth;
   scroll-padding-top: 80px;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 body {
@@ -36,9 +39,31 @@ body {
   color: var(--theme-text);
   font-family: var(--font-geist-sans, 'Inter', system-ui, sans-serif);
   min-height: 100dvh;
+  width: 100%;
+  max-width: 100%;
   overflow-x: hidden;
   transition: background 0.8s ease, color 0.5s ease;
   cursor: crosshair;
+}
+
+body,
+main,
+section {
+  min-width: 0;
+}
+
+img,
+svg,
+canvas,
+video {
+  max-width: 100%;
+}
+
+@supports (overflow-x: clip) {
+  html,
+  body {
+    overflow-x: clip;
+  }
 }
 
 /* ─── Custom Cursor ─────────────────────────────────────────────── */

@@ -8,12 +8,13 @@ import { PERSONAL_INFO } from '../../data/portfolio_data';
 export function HeroSection() {
   const activeTheme = useThemeStore((s) => s.activeTheme);
   const config = THEMES[activeTheme];
+  const cvDownloadUrl = process.env.NEXT_PUBLIC_CV_DOWNLOAD_URL ?? '';
 
   return (
     <section
       id="hero"
       aria-label="World entrance"
-      className="relative min-h-screen flex flex-col items-center justify-center text-center px-6 py-24"
+      className="relative min-h-screen flex flex-col items-center justify-center text-center px-4 sm:px-6 py-20 sm:py-24 overflow-hidden"
     >
       {/* Ambient world glow */}
       <div
@@ -49,7 +50,7 @@ export function HeroSection() {
       >
         {/* Arrival inscription */}
         <motion.p
-          className="text-xs font-bold tracking-[0.55em] uppercase"
+          className="max-w-full text-[11px] sm:text-xs font-bold tracking-[0.32em] sm:tracking-[0.55em] uppercase"
           style={{ color: config?.accentColor, textShadow: `0 0 16px ${config?.glowColor}` }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -60,7 +61,7 @@ export function HeroSection() {
 
         {/* World name */}
         <motion.h1
-          className="text-5xl md:text-7xl font-black tracking-tight leading-none"
+          className="max-w-full text-4xl sm:text-5xl md:text-7xl font-black tracking-tight leading-none text-balance"
           style={{
             color: config?.textColor,
             textShadow: `0 0 60px ${config?.glowColor}, 0 2px 0 rgba(0,0,0,0.5)`,
@@ -93,13 +94,13 @@ export function HeroSection() {
           transition={{ delay: 0.9 }}
         >
           <p
-            className="text-xs font-bold tracking-[0.4em] uppercase"
+            className="text-[11px] sm:text-xs font-bold tracking-[0.28em] sm:tracking-[0.4em] uppercase"
             style={{ color: config?.accentColor, opacity: 0.65 }}
           >
             World shaped by
           </p>
           <p
-            className="text-3xl md:text-4xl font-black"
+            className="text-2xl sm:text-3xl md:text-4xl font-black break-words"
             style={{ color: config?.textColor }}
           >
             {PERSONAL_INFO.displayName}
@@ -114,7 +115,7 @@ export function HeroSection() {
 
         {/* World lore */}
         <motion.p
-          className="text-sm md:text-base max-w-xl leading-relaxed font-light"
+          className="text-sm md:text-base max-w-xl leading-relaxed font-light text-pretty"
           style={{ color: config?.subtextColor, opacity: 0.75 }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 0.75 }}
@@ -125,14 +126,14 @@ export function HeroSection() {
 
         {/* Wayfinding */}
         <motion.div
-          className="flex flex-wrap gap-4 justify-center mt-2"
+          className="grid w-full max-w-sm grid-cols-1 gap-3 sm:max-w-none sm:flex sm:flex-wrap sm:gap-4 sm:justify-center mt-2"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 1.3 }}
         >
           <a
             href="#memory-garden"
-            className="px-7 py-2.5 rounded-full font-semibold text-xs tracking-widest uppercase transition-all duration-300 hover:scale-105 active:scale-95"
+            className="px-5 sm:px-7 py-2.5 rounded-full font-semibold text-[11px] sm:text-xs tracking-[0.14em] sm:tracking-widest uppercase transition-all duration-300 hover:scale-105 active:scale-95"
             style={{
               background: `linear-gradient(135deg, ${config?.primaryColor}, ${config?.accentColor})`,
               color: '#000',
@@ -141,9 +142,24 @@ export function HeroSection() {
           >
             View Projects
           </a>
+          {cvDownloadUrl && (
+            <a
+              href={cvDownloadUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-5 sm:px-7 py-2.5 rounded-full font-semibold text-[11px] sm:text-xs tracking-[0.14em] sm:tracking-widest uppercase transition-all duration-300 hover:scale-105 active:scale-95"
+              style={{
+                background: `linear-gradient(135deg, ${config?.accentColor}, ${config?.primaryColor})`,
+                color: '#000',
+                boxShadow: `0 0 24px ${config?.glowColor}`,
+              }}
+            >
+              Download CV
+            </a>
+          )}
           <a
             href="#void-portal"
-            className="px-7 py-2.5 rounded-full font-semibold text-xs tracking-widest uppercase transition-all duration-300 hover:scale-105 active:scale-95"
+            className="px-5 sm:px-7 py-2.5 rounded-full font-semibold text-[11px] sm:text-xs tracking-[0.14em] sm:tracking-widest uppercase transition-all duration-300 hover:scale-105 active:scale-95"
             style={{
               border: `1.5px solid ${config?.primaryColor}55`,
               color: config?.primaryColor,
@@ -162,7 +178,7 @@ export function HeroSection() {
           transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
           aria-hidden="true"
         >
-          <p className="text-xs tracking-[0.35em] uppercase" style={{ color: config?.subtextColor, opacity: 0.45 }}>
+          <p className="text-[11px] sm:text-xs tracking-[0.25em] sm:tracking-[0.35em] uppercase" style={{ color: config?.subtextColor, opacity: 0.45 }}>
             wander deeper
           </p>
           <svg
