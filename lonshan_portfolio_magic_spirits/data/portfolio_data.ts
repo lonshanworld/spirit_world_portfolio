@@ -62,7 +62,7 @@ export const PERSONAL_INFO: PersonalInfo = {
   displayName: 'Lon Shan',
   title:       'Software Engineer',
   summary:
-    'Software Engineer with 3+ years of working experience building mobile and full-stack applications. Experienced in developing production systems, skilled in building websites and apps from scratch, refactoring systems, and delivering projects on time. Proficient in modern frameworks and adapts quickly to new tools.',
+    'Software Engineer with 3+ years of experience building mobile and full-stack applications. Experienced in developing production systems, building applications from scratch, and delivering projects on time. Proficient in modern frameworks and AI-assisted development workflows to improve productivity and software quality.',
   location:  'Bangkok 10260, Thailand',
   email:     'lonshan3010@gmail.com',
   phone:     '(+66) 0641618200',
@@ -118,6 +118,16 @@ export const EXPERIENCES: Experience[] = [
 // ─── Projects ─────────────────────────────────────────────────────────────────
 
 export const PROJECTS: Project[] = [
+  {
+    id:    'living-spirit-world',
+    title: 'AI-Powered Living Spirit World Portfolio',
+    description:
+      'Built an interactive portfolio world with elemental spirit characters, magic spell effects, real-time interactions, and AI-driven dialogue to turn a traditional resume site into an immersive product experience.',
+    tech:       ['Next.js', 'NestJS', 'Socket.IO', 'Framer Motion', 'R3F', 'Generative AI'],
+    categories: ['web'],
+    link:       'https://lonshan.com',
+    symbol:     '✨',
+  },
   {
     id:    'smart-retail',
     title: 'Business Central — Smart Retail Platform',
@@ -214,7 +224,8 @@ export const EDUCATION: Education[] = [
 
 export const LANGUAGES: Language[] = [
   { name: 'Myanmar', level: 'Native' },
-  { name: 'English', level: 'B2' },
+  { name: 'English', level: 'C1' },
+  { name: 'Japanese', level: 'N5' },
 ];
 
 // ─── Contact links (derived from PERSONAL_INFO for convenience) ───────────────

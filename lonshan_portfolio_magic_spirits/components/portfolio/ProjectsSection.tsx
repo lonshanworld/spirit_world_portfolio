@@ -67,8 +67,8 @@ export function ProjectsSection() {
             Projects
           </h2>
           <p
-            className="text-sm font-light tracking-wide max-w-md mx-auto"
-            style={{ color: config?.subtextColor, opacity: 0.65 }}
+            className="text-sm font-normal tracking-wide max-w-md mx-auto"
+            style={{ color: config?.subtextColor, opacity: 0.85 }}
           >
             A collection of real systems built and shipped
           </p>

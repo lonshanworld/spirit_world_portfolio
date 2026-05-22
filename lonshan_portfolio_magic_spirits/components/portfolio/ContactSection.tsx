@@ -190,7 +190,7 @@ export function ContactSection() {
           </h2>
           <p
             className="text-sm leading-relaxed max-w-sm mx-auto"
-            style={{ color: config?.subtextColor, opacity: 0.65 }}
+            style={{ color: config?.subtextColor, opacity: 0.85 }}
           >
             Open to new opportunities. Send a message and let&apos;s talk.
           </p>
@@ -291,27 +291,43 @@ export function ContactSection() {
           <h3 className="text-lg font-bold" style={{ color: config?.textColor }}>
             Send Message
           </h3>
+          <label htmlFor="contact-email" className="text-xs font-semibold tracking-wide uppercase" style={{ color: config?.accentColor }}>
+            Your email
+          </label>
           <input
+            id="contact-email"
+            name="email"
             type="email"
-            placeholder="Your email"
+            placeholder="you@example.com"
+            autoComplete="email"
             value={formData.email}
             onChange={(e) => setFormData((p) => ({ ...p, email: e.target.value }))}
             className="w-full rounded-lg px-3 py-2 text-sm bg-black/20 border outline-none"
             style={{ borderColor: config?.cardBorder, color: config?.textColor }}
             disabled={status === 'sending'}
           />
+          <label htmlFor="contact-subject" className="text-xs font-semibold tracking-wide uppercase" style={{ color: config?.accentColor }}>
+            Subject
+          </label>
           <input
+            id="contact-subject"
+            name="subject"
             type="text"
-            placeholder="Subject"
+            placeholder="What would you like to discuss?"
             value={formData.title}
             onChange={(e) => setFormData((p) => ({ ...p, title: e.target.value }))}
             className="w-full rounded-lg px-3 py-2 text-sm bg-black/20 border outline-none"
             style={{ borderColor: config?.cardBorder, color: config?.textColor }}
             disabled={status === 'sending'}
           />
+          <label htmlFor="contact-message" className="text-xs font-semibold tracking-wide uppercase" style={{ color: config?.accentColor }}>
+            Message
+          </label>
           <textarea
+            id="contact-message"
+            name="message"
             rows={4}
-            placeholder="Message"
+            placeholder="Share your project, role, or opportunity details"
             value={formData.description}
             onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))}
             className="w-full rounded-lg px-3 py-2 text-sm bg-black/20 border outline-none resize-none"
@@ -345,9 +361,9 @@ export function ContactSection() {
 
         <motion.p
           className="text-xs tracking-widest uppercase"
-          style={{ color: config?.subtextColor, opacity: 0.35 }}
+          style={{ color: config?.subtextColor, opacity: 0.55 }}
           initial={{ opacity: 0 }}
-          whileInView={{ opacity: 0.35 }}
+          whileInView={{ opacity: 0.55 }}
           viewport={{ once: true }}
         >
           The spirits remember every visitor

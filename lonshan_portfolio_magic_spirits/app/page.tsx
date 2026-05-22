@@ -21,6 +21,7 @@ import { HeroSection } from '../components/portfolio/HeroSection';
 import { AIChatSection } from '../components/portfolio/AIChatSection';
 import { ProjectsSection } from '../components/portfolio/ProjectsSection';
 import { ExperienceSection } from '../components/portfolio/ExperienceSection';
+import { EducationSection } from '../components/portfolio/EducationSection';
 import { SkillsSection } from '../components/portfolio/SkillsSection';
 import { ContactSection } from '../components/portfolio/ContactSection';
 
@@ -168,10 +169,11 @@ function WorldOrchestrator() {
         <WorldMap />
         <main>
           <HeroSection />
-          <SkillsSection />
-          <AIChatSection />
           <ExperienceSection />
           <ProjectsSection />
+          <EducationSection />
+          <SkillsSection />
+          <AIChatSection />
           <ContactSection />
         </main>
       </div>

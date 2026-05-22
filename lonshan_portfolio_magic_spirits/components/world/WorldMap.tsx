@@ -9,10 +9,11 @@ import { useWorldStore } from '../../store/worldStore';
 
 const WORLD_AREAS = [
   { label: 'Personal Info', href: '#hero' },
-  { label: 'Skills',    href: '#elemental-archive' },
-  { label: 'AI Chat',   href: '#astral-terminal' },
   { label: 'Work History', href: '#chronicle-hall' },
   { label: 'Projects',  href: '#memory-garden' },
+  { label: 'Education', href: '#scholar-archives' },
+  { label: 'Skills',    href: '#elemental-archive' },
+  { label: 'AI Chat',   href: '#astral-terminal' },
   { label: 'Contact',   href: '#void-portal' },
 ] as const;
 

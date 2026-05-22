@@ -51,10 +51,11 @@ export function ExperienceSection() {
               <p className="text-sm leading-relaxed mb-3 break-words" style={{ color: config?.subtextColor }}>
                 {exp.description}
               </p>
-              <ul className="space-y-1.5">
+              <ul className="space-y-2">
                 {exp.bullets.map((b) => (
-                  <li key={b} className="text-sm break-words" style={{ color: config?.subtextColor }}>
-                    - {b}
+                  <li key={b} className="flex items-start gap-2 text-sm break-words">
+                    <span className="mt-[3px] shrink-0 text-[10px]" style={{ color: config?.primaryColor }} aria-hidden="true">✦</span>
+                    <span style={{ color: config?.subtextColor }}>{b}</span>
                   </li>
                 ))}
               </ul>

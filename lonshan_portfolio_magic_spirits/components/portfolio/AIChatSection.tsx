@@ -13,6 +13,13 @@ interface Message {
   text: string;
 }
 
+const QUICK_PROMPTS = [
+  'Summarize your top projects',
+  'What is your latest work experience?',
+  'What skills do you use most?',
+  'How can I contact you?',
+];
+
 function buildAssistantReply(input: string): string {
   const q = input.toLowerCase();
 
@@ -60,8 +67,7 @@ export function AIChatSection() {
 
   const canSend = useMemo(() => input.trim().length > 0 && !isSending, [input, isSending]);
 
-  const send = async () => {
-    const text = input.trim();
+  const sendMessage = async (text: string) => {
     if (!text) return;
     setInput('');
     setIsSending(true);
@@ -90,6 +96,10 @@ export function AIChatSection() {
     }
   };
 
+  const send = async () => {
+    await sendMessage(input.trim());
+  };
+
   return (
     <section id="astral-terminal" className="relative py-16 sm:py-24 px-4 sm:px-6 overflow-hidden" aria-label="AI assistant">
       <div className="max-w-4xl mx-auto">
@@ -105,13 +115,36 @@ export function AIChatSection() {
           <h2 className="text-3xl sm:text-4xl font-black" style={{ color: config?.textColor }}>
             Portfolio Assistant
           </h2>
+
+          <p className="mt-3 text-sm" style={{ color: config?.subtextColor, opacity: 0.9 }}>
+            Ask anything about projects, skills, work history, or contact details.
+          </p>
         </motion.div>
+
+        <div className="mb-4 flex flex-wrap justify-center gap-2">
+          {QUICK_PROMPTS.map((prompt) => (
+            <button
+              key={prompt}
+              type="button"
+              onClick={() => sendMessage(prompt)}
+              disabled={isSending}
+              className="rounded-full border px-3 py-1.5 text-xs font-semibold transition-all duration-200 disabled:opacity-50"
+              style={{
+                borderColor: `${config?.primaryColor}55`,
+                color: config?.primaryColor,
+                background: `${config?.primaryColor}14`,
+              }}
+            >
+              {prompt}
+            </button>
+          ))}
+        </div>
 
         <div
           className="rounded-2xl border p-3 sm:p-4 md:p-6 overflow-hidden"
           style={{ background: config?.cardBg, borderColor: config?.cardBorder }}
         >
-          <div className="h-64 sm:h-72 overflow-y-auto pr-1 space-y-3">
+          <div className="h-72 sm:h-80 overflow-y-auto pr-1 space-y-3">
             {messages.map((m, idx) => (
               <div key={idx} className={`flex min-w-0 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div

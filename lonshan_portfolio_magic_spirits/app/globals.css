@@ -45,8 +45,24 @@ body {
 
 /* ─── Custom Cursor ─────────────────────────────────────────────── */
 @media (pointer: fine) {
-  * {
-    cursor: none !important;
+  body {
+    cursor: none;
+  }
+
+  input,
+  textarea,
+  select,
+  [contenteditable='true'] {
+    cursor: text !important;
+  }
+
+  button,
+  a,
+  label,
+  summary,
+  [role='button'],
+  [role='link'] {
+    cursor: pointer !important;
   }
 }
 

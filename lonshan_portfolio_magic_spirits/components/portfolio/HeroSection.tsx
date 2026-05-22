@@ -95,7 +95,7 @@ export function HeroSection() {
         >
           <p
             className="text-[11px] sm:text-xs font-bold tracking-[0.28em] sm:tracking-[0.4em] uppercase"
-            style={{ color: config?.accentColor, opacity: 0.65 }}
+            style={{ color: config?.accentColor, opacity: 0.82 }}
           >
             World shaped by
           </p>
@@ -115,10 +115,10 @@ export function HeroSection() {
 
         {/* World lore */}
         <motion.p
-          className="text-sm md:text-base max-w-xl leading-relaxed font-light text-pretty"
-          style={{ color: config?.subtextColor, opacity: 0.75 }}
+          className="text-sm md:text-base max-w-xl leading-relaxed font-normal text-pretty"
+          style={{ color: config?.subtextColor, opacity: 0.92 }}
           initial={{ opacity: 0 }}
-          animate={{ opacity: 0.75 }}
+          animate={{ opacity: 0.92 }}
           transition={{ delay: 1.1 }}
         >
           {PERSONAL_INFO.summary}
@@ -178,7 +178,7 @@ export function HeroSection() {
           transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
           aria-hidden="true"
         >
-          <p className="text-[11px] sm:text-xs tracking-[0.25em] sm:tracking-[0.35em] uppercase" style={{ color: config?.subtextColor, opacity: 0.45 }}>
+          <p className="text-[11px] sm:text-xs tracking-[0.25em] sm:tracking-[0.35em] uppercase" style={{ color: config?.subtextColor, opacity: 0.65 }}>
             wander deeper
           </p>
           <svg
@@ -187,7 +187,7 @@ export function HeroSection() {
             fill="none"
             stroke="currentColor"
             strokeWidth={1.5}
-            style={{ color: config?.primaryColor, opacity: 0.45 }}
+            style={{ color: config?.primaryColor, opacity: 0.65 }}
           >
             <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
           </svg>
