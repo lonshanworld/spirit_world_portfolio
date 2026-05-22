@@ -15,6 +15,8 @@ interface SpiritMagicSealProps {
   variant?: 'full' | 'mini';
 }
 
+type SealShape = 'triangle' | 'ellipseH' | 'hexagon' | 'pentagon' | 'squareTilt' | 'star5' | 'star6' | 'brokenArc' | 'star8' | 'cross' | 'ellipseV' | 'diamond' | 'octagon' | 'circle';
+
 interface SealProfile {
   outerDash: string;
   innerDash: string;
@@ -26,23 +28,24 @@ interface SealProfile {
   releaseScale: number;
   ringMode: 'smooth' | 'ripple' | 'angular' | 'broken' | 'cosmic' | 'clock' | 'tech';
   runeFamily: 'flame' | 'wave' | 'shard' | 'gust' | 'stone' | 'bloom' | 'bolt' | 'shadow' | 'halo' | 'mend' | 'void' | 'orbit' | 'time' | 'circuit';
+  sealShape: SealShape;
 }
 
 const PROFILE_BY_ELEMENT: Record<ElementType, SealProfile> = {
-  fire: { outerDash: '9 5', innerDash: '2 6', outerSeconds: 4.2, innerSeconds: 6.5, glyphSeconds: 6, outerDirection: 1, innerDirection: -1, releaseScale: 2.7, ringMode: 'angular', runeFamily: 'flame' },
-  water: { outerDash: '2 8', innerDash: '1 6', outerSeconds: 8.4, innerSeconds: 10, glyphSeconds: 10, outerDirection: -1, innerDirection: 1, releaseScale: 2.3, ringMode: 'ripple', runeFamily: 'wave' },
-  ice: { outerDash: '1 6', innerDash: '1 4', outerSeconds: 7, innerSeconds: 11, glyphSeconds: 12, outerDirection: 1, innerDirection: -1, releaseScale: 2.2, ringMode: 'smooth', runeFamily: 'shard' },
-  wind: { outerDash: '4 7', innerDash: '1 10', outerSeconds: 5.5, innerSeconds: 7.8, glyphSeconds: 8, outerDirection: 1, innerDirection: 1, releaseScale: 2.4, ringMode: 'ripple', runeFamily: 'gust' },
-  soil: { outerDash: '12 4', innerDash: '6 6', outerSeconds: 9.2, innerSeconds: 14, glyphSeconds: 11, outerDirection: -1, innerDirection: 1, releaseScale: 2.1, ringMode: 'angular', runeFamily: 'stone' },
-  trees: { outerDash: '5 5', innerDash: '2 5', outerSeconds: 8.8, innerSeconds: 12, glyphSeconds: 9, outerDirection: 1, innerDirection: -1, releaseScale: 2.25, ringMode: 'smooth', runeFamily: 'bloom' },
-  lightning: { outerDash: '3 9', innerDash: '1 7', outerSeconds: 2.8, innerSeconds: 4.2, glyphSeconds: 3, outerDirection: 1, innerDirection: -1, releaseScale: 2.8, ringMode: 'angular', runeFamily: 'bolt' },
-  dark: { outerDash: '7 6', innerDash: '2 8', outerSeconds: 10, innerSeconds: 13, glyphSeconds: 9, outerDirection: -1, innerDirection: -1, releaseScale: 2.3, ringMode: 'smooth', runeFamily: 'shadow' },
-  light: { outerDash: '2 4', innerDash: '1 5', outerSeconds: 6, innerSeconds: 8, glyphSeconds: 7, outerDirection: 1, innerDirection: -1, releaseScale: 2.5, ringMode: 'smooth', runeFamily: 'halo' },
-  healing: { outerDash: '4 6', innerDash: '2 5', outerSeconds: 7, innerSeconds: 10, glyphSeconds: 9, outerDirection: -1, innerDirection: 1, releaseScale: 2.4, ringMode: 'smooth', runeFamily: 'mend' },
-  void: { outerDash: '14 10', innerDash: '8 8', outerSeconds: 11, innerSeconds: 7, glyphSeconds: 5, outerDirection: -1, innerDirection: 1, releaseScale: 3, ringMode: 'broken', runeFamily: 'void' },
-  space: { outerDash: '2 10', innerDash: '1 8', outerSeconds: 14, innerSeconds: 9, glyphSeconds: 12, outerDirection: 1, innerDirection: -1, releaseScale: 2.6, ringMode: 'cosmic', runeFamily: 'orbit' },
-  time: { outerDash: '6 4', innerDash: '1 3', outerSeconds: 12, innerSeconds: 12, glyphSeconds: 10, outerDirection: 1, innerDirection: -1, releaseScale: 2.2, ringMode: 'clock', runeFamily: 'time' },
-  robot: { outerDash: '3 3', innerDash: '1 4', outerSeconds: 4, innerSeconds: 5, glyphSeconds: 4, outerDirection: -1, innerDirection: 1, releaseScale: 2.5, ringMode: 'tech', runeFamily: 'circuit' },
+  fire:      { outerDash: '9 5',   innerDash: '2 6',  outerSeconds: 4.2,  innerSeconds: 6.5,  glyphSeconds: 6,  outerDirection:  1, innerDirection: -1, releaseScale: 2.7,  ringMode: 'angular', runeFamily: 'flame',   sealShape: 'triangle'   },
+  water:     { outerDash: '2 8',   innerDash: '1 6',  outerSeconds: 8.4,  innerSeconds: 10,   glyphSeconds: 10, outerDirection: -1, innerDirection:  1, releaseScale: 2.3,  ringMode: 'ripple',  runeFamily: 'wave',    sealShape: 'ellipseH'   },
+  ice:       { outerDash: '1 6',   innerDash: '1 4',  outerSeconds: 7,    innerSeconds: 11,   glyphSeconds: 12, outerDirection:  1, innerDirection: -1, releaseScale: 2.2,  ringMode: 'smooth',  runeFamily: 'shard',   sealShape: 'hexagon'    },
+  wind:      { outerDash: '4 7',   innerDash: '1 10', outerSeconds: 5.5,  innerSeconds: 7.8,  glyphSeconds: 8,  outerDirection:  1, innerDirection:  1, releaseScale: 2.4,  ringMode: 'ripple',  runeFamily: 'gust',    sealShape: 'pentagon'   },
+  soil:      { outerDash: '12 4',  innerDash: '6 6',  outerSeconds: 9.2,  innerSeconds: 14,   glyphSeconds: 11, outerDirection: -1, innerDirection:  1, releaseScale: 2.1,  ringMode: 'angular', runeFamily: 'stone',   sealShape: 'squareTilt' },
+  trees:     { outerDash: '5 5',   innerDash: '2 5',  outerSeconds: 8.8,  innerSeconds: 12,   glyphSeconds: 9,  outerDirection:  1, innerDirection: -1, releaseScale: 2.25, ringMode: 'smooth',  runeFamily: 'bloom',   sealShape: 'star6'      },
+  lightning: { outerDash: '3 9',   innerDash: '1 7',  outerSeconds: 2.8,  innerSeconds: 4.2,  glyphSeconds: 3,  outerDirection:  1, innerDirection: -1, releaseScale: 2.8,  ringMode: 'angular', runeFamily: 'bolt',    sealShape: 'star5'      },
+  dark:      { outerDash: '7 6',   innerDash: '2 8',  outerSeconds: 10,   innerSeconds: 13,   glyphSeconds: 9,  outerDirection: -1, innerDirection: -1, releaseScale: 2.3,  ringMode: 'smooth',  runeFamily: 'shadow',  sealShape: 'brokenArc'  },
+  light:     { outerDash: '2 4',   innerDash: '1 5',  outerSeconds: 6,    innerSeconds: 8,    glyphSeconds: 7,  outerDirection:  1, innerDirection: -1, releaseScale: 2.5,  ringMode: 'smooth',  runeFamily: 'halo',    sealShape: 'star8'      },
+  healing:   { outerDash: '4 6',   innerDash: '2 5',  outerSeconds: 7,    innerSeconds: 10,   glyphSeconds: 9,  outerDirection: -1, innerDirection:  1, releaseScale: 2.4,  ringMode: 'smooth',  runeFamily: 'mend',    sealShape: 'cross'      },
+  void:      { outerDash: '14 10', innerDash: '8 8',  outerSeconds: 11,   innerSeconds: 7,    glyphSeconds: 5,  outerDirection: -1, innerDirection:  1, releaseScale: 3,    ringMode: 'broken',  runeFamily: 'void',    sealShape: 'diamond'    },
+  space:     { outerDash: '2 10',  innerDash: '1 8',  outerSeconds: 14,   innerSeconds: 9,    glyphSeconds: 12, outerDirection:  1, innerDirection: -1, releaseScale: 2.6,  ringMode: 'cosmic',  runeFamily: 'orbit',   sealShape: 'ellipseV'   },
+  time:      { outerDash: '6 4',   innerDash: '1 3',  outerSeconds: 12,   innerSeconds: 12,   glyphSeconds: 10, outerDirection:  1, innerDirection: -1, releaseScale: 2.2,  ringMode: 'clock',   runeFamily: 'time',    sealShape: 'circle'     },
+  robot:     { outerDash: '3 3',   innerDash: '1 4',  outerSeconds: 4,    innerSeconds: 5,    glyphSeconds: 4,  outerDirection: -1, innerDirection:  1, releaseScale: 2.5,  ringMode: 'tech',    runeFamily: 'circuit', sealShape: 'octagon'    },
 };
 
 function ringGradient(mode: SealProfile['ringMode'], primaryColor: string, secondaryColor: string): string {
@@ -85,6 +88,158 @@ function runePath(family: SealProfile['runeFamily'], index: number, mini: boolea
   }
 }
 
+// ─── Geometry helpers ─────────────────────────────────────────────────────────
+
+function polygonPts(cx: number, cy: number, r: number, n: number, offsetDeg = 0): string {
+  return Array.from({ length: n }, (_, i) => {
+    const a = ((i / n) * 360 + offsetDeg) * (Math.PI / 180);
+    return `${cx + r * Math.cos(a)},${cy + r * Math.sin(a)}`;
+  }).join(' ');
+}
+
+function starPts(cx: number, cy: number, r: number, n: number, offsetDeg = 0, innerRatio = 0.42): string {
+  const ri = r * innerRatio;
+  return Array.from({ length: n * 2 }, (_, i) => {
+    const rr = i % 2 === 0 ? r : ri;
+    const a = ((i / (n * 2)) * 360 + offsetDeg) * (Math.PI / 180);
+    return `${cx + rr * Math.cos(a)},${cy + rr * Math.sin(a)}`;
+  }).join(' ');
+}
+
+function renderSealRings(
+  shape: SealShape,
+  cx: number, cy: number,
+  outerR: number, innerR: number,
+  primary: string, secondary: string,
+  outerSW: number, innerSW: number,
+  outerDash: string, innerDash: string,
+) {
+  switch (shape) {
+    case 'triangle': return (
+      <>
+        <polygon points={polygonPts(cx, cy, outerR, 3, -90)} fill="none" stroke={primary} strokeWidth={outerSW} strokeDasharray={outerDash} />
+        <polygon points={polygonPts(cx, cy, innerR, 3, -90)} fill="none" stroke={secondary} strokeWidth={innerSW} strokeDasharray={innerDash} />
+        <polygon points={polygonPts(cx, cy, outerR * 0.5, 3, 90)} fill="none" stroke={primary} strokeWidth={outerSW * 0.6} opacity={0.7} />
+        <line x1={cx} y1={cy - outerR * 0.42} x2={cx} y2={cy + outerR * 0.42} stroke={secondary} strokeWidth={innerSW} opacity={0.6} />
+      </>
+    );
+    case 'ellipseH': return (
+      <>
+        <ellipse cx={cx} cy={cy} rx={outerR * 1.2} ry={outerR * 0.7} fill="none" stroke={primary} strokeWidth={outerSW} strokeDasharray={outerDash} />
+        <ellipse cx={cx} cy={cy} rx={innerR * 1.18} ry={innerR * 0.68} fill="none" stroke={secondary} strokeWidth={innerSW} strokeDasharray={innerDash} />
+        <ellipse cx={cx} cy={cy} rx={outerR * 0.55} ry={outerR * 0.33} fill="none" stroke={secondary} strokeWidth={outerSW * 0.55} opacity={0.85} />
+        <ellipse cx={cx} cy={cy} rx={outerR * 0.38} ry={outerR * 0.22} fill="none" stroke={primary} strokeWidth={outerSW * 0.55} opacity={0.7} />
+      </>
+    );
+    case 'hexagon': return (
+      <>
+        <polygon points={polygonPts(cx, cy, outerR, 6, -90)} fill="none" stroke={primary} strokeWidth={outerSW} strokeDasharray={outerDash} />
+        <polygon points={polygonPts(cx, cy, innerR, 6, -90)} fill="none" stroke={secondary} strokeWidth={innerSW} strokeDasharray={innerDash} />
+        <polygon points={polygonPts(cx, cy, outerR * 0.48, 6, 0)} fill="none" stroke={secondary} strokeWidth={outerSW * 0.55} opacity={0.85} />
+        <polygon points={polygonPts(cx, cy, outerR * 0.3, 3, -90)} fill="none" stroke={primary} strokeWidth={outerSW * 0.55} opacity={0.7} />
+      </>
+    );
+    case 'pentagon': return (
+      <>
+        <polygon points={polygonPts(cx, cy, outerR, 5, -90)} fill="none" stroke={primary} strokeWidth={outerSW} strokeDasharray={outerDash} />
+        <polygon points={polygonPts(cx, cy, innerR, 5, -90)} fill="none" stroke={secondary} strokeWidth={innerSW} strokeDasharray={innerDash} />
+        <polygon points={polygonPts(cx, cy, outerR * 0.48, 5, -18)} fill="none" stroke={secondary} strokeWidth={outerSW * 0.55} opacity={0.85} />
+        <polygon points={polygonPts(cx, cy, outerR * 0.3, 5, -90)} fill="none" stroke={primary} strokeWidth={outerSW * 0.55} opacity={0.7} />
+      </>
+    );
+    case 'squareTilt': return (
+      <>
+        <polygon points={polygonPts(cx, cy, outerR, 4, 45)} fill="none" stroke={primary} strokeWidth={outerSW} strokeDasharray={outerDash} />
+        <polygon points={polygonPts(cx, cy, innerR, 4, 45)} fill="none" stroke={secondary} strokeWidth={innerSW} strokeDasharray={innerDash} />
+        <polygon points={polygonPts(cx, cy, outerR * 0.5, 4, 0)} fill="none" stroke={secondary} strokeWidth={outerSW * 0.55} opacity={0.85} />
+        <polygon points={polygonPts(cx, cy, outerR * 0.32, 4, 45)} fill="none" stroke={primary} strokeWidth={outerSW * 0.55} opacity={0.7} />
+      </>
+    );
+    case 'star5': return (
+      <>
+        <polygon points={starPts(cx, cy, outerR, 5, -90)} fill="none" stroke={primary} strokeWidth={outerSW} strokeDasharray={outerDash} />
+        <polygon points={starPts(cx, cy, innerR, 5, -90)} fill="none" stroke={secondary} strokeWidth={innerSW} strokeDasharray={innerDash} />
+        <polygon points={polygonPts(cx, cy, outerR * 0.42, 5, -90)} fill="none" stroke={secondary} strokeWidth={outerSW * 0.55} opacity={0.85} />
+        <polygon points={polygonPts(cx, cy, outerR * 0.26, 5, -90)} fill="none" stroke={primary} strokeWidth={outerSW * 0.55} opacity={0.7} />
+      </>
+    );
+    case 'star6': return (
+      <>
+        <polygon points={starPts(cx, cy, outerR, 6, -90, 0.5)} fill="none" stroke={primary} strokeWidth={outerSW} strokeDasharray={outerDash} />
+        <polygon points={starPts(cx, cy, innerR, 6, -90, 0.5)} fill="none" stroke={secondary} strokeWidth={innerSW} strokeDasharray={innerDash} />
+        <polygon points={polygonPts(cx, cy, outerR * 0.45, 6, -90)} fill="none" stroke={secondary} strokeWidth={outerSW * 0.55} opacity={0.85} />
+        <polygon points={polygonPts(cx, cy, outerR * 0.28, 3, -90)} fill="none" stroke={primary} strokeWidth={outerSW * 0.55} opacity={0.7} />
+      </>
+    );
+    case 'brokenArc': {
+      const rad = (d: number) => d * (Math.PI / 180);
+      const arc = (r: number, a1: number, a2: number) =>
+        `M ${cx + r * Math.cos(rad(a1))} ${cy + r * Math.sin(rad(a1))} A ${r} ${r} 0 ${Math.abs(a2 - a1) > 180 ? 1 : 0} 1 ${cx + r * Math.cos(rad(a2))} ${cy + r * Math.sin(rad(a2))}`;
+      return (
+        <>
+          <path d={`${arc(outerR, -70, 40)} ${arc(outerR, 65, 172)} ${arc(outerR, 198, 278)}`} fill="none" stroke={primary} strokeWidth={outerSW} strokeDasharray={outerDash} strokeLinecap="butt" />
+          <path d={`${arc(innerR, -30, 90)} ${arc(innerR, 120, 250)}`} fill="none" stroke={secondary} strokeWidth={innerSW} strokeDasharray={innerDash} strokeLinecap="butt" />
+          <polygon points={polygonPts(cx, cy, outerR * 0.42, 4, 30)} fill="none" stroke={secondary} strokeWidth={outerSW * 0.55} opacity={0.85} />
+          <polygon points={polygonPts(cx, cy, outerR * 0.28, 4, 75)} fill="none" stroke={primary} strokeWidth={outerSW * 0.55} opacity={0.7} />
+        </>
+      );
+    }
+    case 'star8': return (
+      <>
+        <polygon points={starPts(cx, cy, outerR, 8, -22.5)} fill="none" stroke={primary} strokeWidth={outerSW} strokeDasharray={outerDash} />
+        <polygon points={starPts(cx, cy, innerR, 8, -22.5)} fill="none" stroke={secondary} strokeWidth={innerSW} strokeDasharray={innerDash} />
+        <polygon points={polygonPts(cx, cy, outerR * 0.44, 8, -22.5)} fill="none" stroke={secondary} strokeWidth={outerSW * 0.55} opacity={0.85} />
+        <polygon points={polygonPts(cx, cy, outerR * 0.28, 4, 0)} fill="none" stroke={primary} strokeWidth={outerSW * 0.55} opacity={0.7} />
+      </>
+    );
+    case 'cross': {
+      const aw = outerR * 0.28;
+      const iaw = innerR * 0.3;
+      return (
+        <>
+          <path d={`M ${cx-aw} ${cy-outerR} L ${cx+aw} ${cy-outerR} L ${cx+aw} ${cy-aw} L ${cx+outerR} ${cy-aw} L ${cx+outerR} ${cy+aw} L ${cx+aw} ${cy+aw} L ${cx+aw} ${cy+outerR} L ${cx-aw} ${cy+outerR} L ${cx-aw} ${cy+aw} L ${cx-outerR} ${cy+aw} L ${cx-outerR} ${cy-aw} L ${cx-aw} ${cy-aw} Z`} fill="none" stroke={primary} strokeWidth={outerSW} strokeDasharray={outerDash} />
+          <path d={`M ${cx-iaw} ${cy-innerR} L ${cx+iaw} ${cy-innerR} L ${cx+iaw} ${cy-iaw} L ${cx+innerR} ${cy-iaw} L ${cx+innerR} ${cy+iaw} L ${cx+iaw} ${cy+iaw} L ${cx+iaw} ${cy+innerR} L ${cx-iaw} ${cy+innerR} L ${cx-iaw} ${cy+iaw} L ${cx-innerR} ${cy+iaw} L ${cx-innerR} ${cy-iaw} L ${cx-iaw} ${cy-iaw} Z`} fill="none" stroke={secondary} strokeWidth={innerSW} strokeDasharray={innerDash} />
+          <polygon points={polygonPts(cx, cy, outerR * 0.38, 4, 0)} fill="none" stroke={secondary} strokeWidth={outerSW * 0.55} opacity={0.85} />
+          <polygon points={polygonPts(cx, cy, outerR * 0.25, 4, 45)} fill="none" stroke={primary} strokeWidth={outerSW * 0.55} opacity={0.7} />
+        </>
+      );
+    }
+    case 'ellipseV': return (
+      <>
+        <ellipse cx={cx} cy={cy} rx={outerR * 0.7} ry={outerR * 1.2} fill="none" stroke={primary} strokeWidth={outerSW} strokeDasharray={outerDash} />
+        <ellipse cx={cx} cy={cy} rx={innerR * 0.68} ry={innerR * 1.18} fill="none" stroke={secondary} strokeWidth={innerSW} strokeDasharray={innerDash} />
+        <ellipse cx={cx} cy={cy} rx={outerR * 0.33} ry={outerR * 0.55} fill="none" stroke={secondary} strokeWidth={outerSW * 0.55} opacity={0.85} />
+        <ellipse cx={cx} cy={cy} rx={outerR * 0.22} ry={outerR * 0.38} fill="none" stroke={primary} strokeWidth={outerSW * 0.55} opacity={0.7} />
+      </>
+    );
+    case 'diamond': return (
+      <>
+        <polygon points={polygonPts(cx, cy, outerR, 4, 0)} fill="none" stroke={primary} strokeWidth={outerSW} strokeDasharray={outerDash} />
+        <polygon points={polygonPts(cx, cy, innerR, 4, 0)} fill="none" stroke={secondary} strokeWidth={innerSW} strokeDasharray={innerDash} />
+        <polygon points={polygonPts(cx, cy, outerR * 0.5, 4, 45)} fill="none" stroke={secondary} strokeWidth={outerSW * 0.55} opacity={0.85} />
+        <polygon points={polygonPts(cx, cy, outerR * 0.32, 4, 0)} fill="none" stroke={primary} strokeWidth={outerSW * 0.55} opacity={0.7} />
+      </>
+    );
+    case 'octagon': return (
+      <>
+        <polygon points={polygonPts(cx, cy, outerR, 8, -22.5)} fill="none" stroke={primary} strokeWidth={outerSW} strokeDasharray={outerDash} />
+        <polygon points={polygonPts(cx, cy, innerR, 8, -22.5)} fill="none" stroke={secondary} strokeWidth={innerSW} strokeDasharray={innerDash} />
+        <polygon points={polygonPts(cx, cy, outerR * 0.48, 4, 0)} fill="none" stroke={secondary} strokeWidth={outerSW * 0.55} opacity={0.85} />
+        <polygon points={polygonPts(cx, cy, outerR * 0.3, 8, 0)} fill="none" stroke={primary} strokeWidth={outerSW * 0.55} opacity={0.7} />
+      </>
+    );
+    case 'circle':
+    default: return (
+      <>
+        <circle cx={cx} cy={cy} r={outerR} fill="none" stroke={primary} strokeWidth={outerSW} strokeDasharray={outerDash} />
+        <circle cx={cx} cy={cy} r={innerR} fill="none" stroke={secondary} strokeWidth={innerSW} strokeDasharray={innerDash} />
+        <polygon points={polygonPts(cx, cy, outerR * 0.55, 4, 45)} fill="none" stroke={secondary} strokeWidth={outerSW * 0.55} opacity={0.85} />
+        <polygon points={polygonPts(cx, cy, outerR * 0.38, 4, 0)} fill="none" stroke={primary} strokeWidth={outerSW * 0.55} opacity={0.7} />
+      </>
+    );
+  }
+}
+
 export function SpiritMagicSeal({
   element,
   primaryColor,
@@ -101,7 +256,9 @@ export function SpiritMagicSeal({
   const baseSize = isMini ? 140 : 220;
   const ringInset = isMini ? '14px' : '18px';
   const auraInset = isMini ? '26px' : '36px';
-  const outerStrokeW = isMini ? 1.5 : 2;
+  // const outerStrokeW = isMini ? 2 : 2.8;
+  // const innerStrokeW = isMini ? 1.7 : 2.2;
+   const outerStrokeW = isMini ? 1.5 : 2;
   const innerStrokeW = isMini ? 1.4 : 1.8;
   const centerCoreSize = isMini ? 18 : 26;
   const pulseCoreSize = isMini ? 30 : 42;
@@ -146,6 +303,7 @@ export function SpiritMagicSeal({
                 background: ringGradient(profile.ringMode, primaryColor, secondaryColor),
                 WebkitMask: 'radial-gradient(circle, transparent 57%, black 58%)',
                 mask: 'radial-gradient(circle, transparent 57%, black 58%)',
+                opacity: 0.28,
               }}
               animate={{ rotate: profile.outerDirection * 360 }}
               transition={{ duration: isMini ? profile.outerSeconds * 0.72 : profile.outerSeconds, repeat: Infinity, ease: 'linear' }}
@@ -157,10 +315,7 @@ export function SpiritMagicSeal({
               animate={{ rotate: profile.innerDirection * 360 }}
               transition={{ duration: isMini ? profile.innerSeconds * 0.68 : profile.innerSeconds, repeat: Infinity, ease: 'linear' }}
             >
-              <circle cx="110" cy="110" r={isMini ? 54 : 66} fill="none" stroke={primaryColor} strokeWidth={outerStrokeW} strokeDasharray={profile.outerDash} />
-              <circle cx="110" cy="110" r={isMini ? 40 : 49} fill="none" stroke={secondaryColor} strokeWidth={innerStrokeW} strokeDasharray={profile.innerDash} />
-              <polygon points="110,74 130,110 110,146 90,110" fill="none" stroke={secondaryColor} strokeWidth={isMini ? 0.9 : 1.1} opacity={0.85} />
-              <polygon points="110,82 124,110 110,138 96,110" fill="none" stroke={primaryColor} strokeWidth={isMini ? 0.9 : 1.1} opacity={0.7} />
+              {renderSealRings(profile.sealShape, 110, 110, isMini ? 70 : 86, isMini ? 54 : 68, primaryColor, secondaryColor, outerStrokeW, innerStrokeW, profile.outerDash, profile.innerDash)}
             </motion.svg>
 
             <motion.svg
