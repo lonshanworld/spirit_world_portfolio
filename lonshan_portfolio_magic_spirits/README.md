@@ -34,3 +34,23 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Deploy on Cloudflare Workers
+
+This frontend is set up to deploy from the `lonshan_portfolio_magic_spirits` subdirectory only.
+
+The GitHub Actions workflow runs only when files in that subdirectory change, then builds the app with OpenNext and deploys it to Cloudflare Workers.
+
+Before the workflow can run, add these GitHub repository variables and secrets:
+
+- `CLOUDFLARE_API_TOKEN` secret
+- `CLOUDFLARE_ACCOUNT_ID` secret
+- `NEXT_PUBLIC_BACKEND_URL` variable
+- `NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY` variable
+- `NEXT_PUBLIC_CV_DOWNLOAD_URL` variable
+
+If you want to deploy manually from the frontend folder, use:
+
+```bash
+npm run deploy
+```
