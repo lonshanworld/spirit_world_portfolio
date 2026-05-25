@@ -3,17 +3,14 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
 
-// World layer
-import { ParticleField } from '../components/world/ParticleField';
-
-// Spirit layer
-import { SpiritManager } from '../components/spirits/SpiritManager';
+// Unified 3D world + spirit canvas
+import { SpiritScene3D } from '../components/world/SpiritScene3D';
 import { CombatManager } from '../components/spirits/CombatManager';
 
 // Dialogue layer — now rendered inline above each spirit in SpiritOrb
 
 // Theme system
-import { ThemeProvider } from '../components/theme/ThemeProvider';
+import { ThemeProvider, useThemeContext } from '../components/theme/ThemeProvider';
 import { ThemeTransition } from '../components/theme/ThemeTransition';
 
 // Portfolio sections
@@ -90,6 +87,9 @@ function MagicalCursor() {
 function WorldOrchestrator() {
   const initSpirits = useWorldStore((s) => s.initSpirits);
   const pendingCombination = useThemeStore((s) => s.pendingCombination);
+  const tapSpirit = useThemeStore((s) => s.tapSpirit);
+  const clearPendingCombination = useThemeStore((s) => s.clearPendingCombination);
+  const { activeTheme, changeTheme } = useThemeContext();
   const {
     triggerSpiritInvocation,
     triggerSpiritCompanionTap,
@@ -113,52 +113,52 @@ function WorldOrchestrator() {
     ),
   );
 
-  const handleSpiritTap = useCallback(
-    (element: ElementType) => {
-      // Check if a combination was triggered
-      if (pendingCombination && pendingCombination !== element) {
-        const hybrid = getCombination(pendingCombination, element);
-        if (hybrid) {
-          triggerCombination(hybrid, pendingCombination, element);
-          return;
-        }
-      }
-    },
-    [pendingCombination, triggerCombination],
-  );
+  const handleSpiritTap = useCallback((element: ElementType, instanceId: SpiritInstanceId) => {
+    // Same-theme taps are companion interactions, not transformations.
+    if (activeTheme === element) {
+      clearPendingCombination();
+      triggerSpiritCompanionTap(element, instanceId);
+      return;
+    }
 
-  const handleSpiritInvocation = useCallback(
-    (element: ElementType, instanceId: SpiritInstanceId, mode: 'transform' | 'companion') => {
-      if (mode === 'companion') {
-        triggerSpiritCompanionTap(element, instanceId);
-        return;
-      }
+    const firstElement = pendingCombination;
+    const nextTheme = tapSpirit(element);
+    const hybrid = firstElement && firstElement !== element
+      ? getCombination(firstElement, element)
+      : null;
+
+    if (hybrid) {
+      triggerCombination(hybrid, firstElement ?? undefined, element);
+      changeTheme(hybrid);
       triggerSpiritInvocation(element, instanceId);
-    },
-    [triggerSpiritCompanionTap, triggerSpiritInvocation],
-  );
+      return;
+    }
+
+    changeTheme(nextTheme);
+    triggerSpiritInvocation(element, instanceId);
+  }, [
+    activeTheme,
+    changeTheme,
+    clearPendingCombination,
+    pendingCombination,
+    tapSpirit,
+    triggerCombination,
+    triggerSpiritCompanionTap,
+    triggerSpiritInvocation,
+  ]);
 
   return (
     <>
-      {/* Fixed world layers — always visible */}
-      <ParticleField />
+      {/* Unified 3D world: background particles + all spirits in one WebGL canvas */}
+      <SpiritScene3D
+        onSpiritTap={handleSpiritTap}
+        onSpiritHover={(element, instanceId) => triggerHover(element, instanceId)}
+      />
       <ThemeTransition />
 
-      {/* Spirit world layer — ABSOLUTE so spirits roam the entire scrollable document.
-          Spirits at worldY > 100% appear in sections below the hero as you scroll. */}
-      <div
-        className="absolute inset-0 z-20 pointer-events-none"
-        style={{ overflowX: 'clip', overflowY: 'visible' }}
-      >
-        <div className="pointer-events-none w-full h-full relative">
-          <SpiritManager
-            onSpiritTap={handleSpiritTap}
-            onSpiritInvocation={handleSpiritInvocation}
-            onSpiritHover={(element, instanceId) => triggerHover(element, instanceId)}
-          />
-          {/* Combat system — rendered inside spirit layer so z-indices align */}
-          <CombatManager />
-        </div>
+      {/* Combat system — DOM overlay for combat projectile arcs */}
+      <div className="fixed inset-0 z-20 pointer-events-none">
+        <CombatManager />
       </div>
 
       {/* Custom cursor */}

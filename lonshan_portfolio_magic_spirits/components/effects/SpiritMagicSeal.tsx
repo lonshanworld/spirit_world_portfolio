@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { AnimatePresence, motion } from 'framer-motion';
 import { useMemo } from 'react';
@@ -88,7 +88,7 @@ function runePath(family: SealProfile['runeFamily'], index: number, mini: boolea
   }
 }
 
-// ─── Geometry helpers ─────────────────────────────────────────────────────────
+// Geometry helpers
 
 function polygonPts(cx: number, cy: number, r: number, n: number, offsetDeg = 0): string {
   return Array.from({ length: n }, (_, i) => {

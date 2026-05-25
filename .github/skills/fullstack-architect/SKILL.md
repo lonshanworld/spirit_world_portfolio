@@ -214,3 +214,4 @@ AI modules inside NestJS must isolate:
 - **World simulation** (event triggers, environment state)
 
 Never let AI reasoning bleed into HTTP controllers or WebSocket gateways directly — use services as the boundary.
+

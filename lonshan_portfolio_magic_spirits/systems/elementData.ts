@@ -27,8 +27,8 @@ export const SPIRIT_DEFINITIONS: Record<ElementType, SpiritDefinition> = {
   },
   wind: {
     id: 'wind', name: 'Ventus', symbol: '💨',
-    primaryColor: '#A8E030', secondaryColor: '#C8F050',
-    glowColor: 'rgba(168,224,48,0.5)', shadowColor: 'rgba(120,180,20,0.5)',
+    primaryColor: '#8fe7ff', secondaryColor: '#56c6e5',
+    glowColor: 'rgba(143,231,255,0.55)', shadowColor: 'rgba(42,118,152,0.58)',
     personality: 'Carefree, whimsical, playful, easily distracted',
     speakingStyle: 'Light, breezy, topic-hopping',
     defaultEmotion: 'playful', motionPattern: 'float', motionSpeed: 3, size: 0.95,
@@ -75,8 +75,8 @@ export const SPIRIT_DEFINITIONS: Record<ElementType, SpiritDefinition> = {
   },
   healing: {
     id: 'healing', name: 'Aura', symbol: '💚',
-    primaryColor: '#FF80C0', secondaryColor: '#FF3890',
-    glowColor: 'rgba(255,128,192,0.6)', shadowColor: 'rgba(220,40,120,0.5)',
+    primaryColor: '#7ce58f', secondaryColor: '#b8ffd0',
+    glowColor: 'rgba(124,229,143,0.6)', shadowColor: 'rgba(42,132,74,0.54)',
     personality: 'Gentle, nurturing, supportive, deeply compassionate',
     speakingStyle: 'Soft, reassuring, healing words',
     defaultEmotion: 'calm', motionPattern: 'pulse', motionSpeed: 1, size: 1.0,
@@ -91,8 +91,8 @@ export const SPIRIT_DEFINITIONS: Record<ElementType, SpiritDefinition> = {
   },
   space: {
     id: 'space', name: 'Cosmus', symbol: '🌌',
-    primaryColor: '#FF44AA', secondaryColor: '#CC1177',
-    glowColor: 'rgba(255,68,170,0.5)', shadowColor: 'rgba(180,20,100,0.7)',
+    primaryColor: '#5f78ff', secondaryColor: '#9b7dff',
+    glowColor: 'rgba(95,120,255,0.58)', shadowColor: 'rgba(56,44,123,0.66)',
     personality: 'Vast, contemplative, speaks in cosmic scales',
     speakingStyle: 'Grand perspectives, infinite metaphors',
     defaultEmotion: 'mysterious', motionPattern: 'spin', motionSpeed: 2, size: 1.0,
